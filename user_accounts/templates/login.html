@@ -1,0 +1,219 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ログイン</title>
+
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+
+    <style>
+        .custom-navbar {
+            background-color: #212529;
+            padding: 18px 0;
+        }
+
+        .system-name {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .login-main {
+            padding-top: 150px;
+            padding-bottom: 80px;
+        }
+
+        .login-box {
+            max-width: 450px;
+            margin: 0 auto;
+
+            padding: 40px;
+
+            background-color: white;
+
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .login-title {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .login-title h1 {
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .login-title p {
+            color: #777;
+            margin-bottom: 0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            box-sizing: border-box;
+
+            padding: 12px;
+
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+
+            font-size: 16px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #6c757d;
+            box-shadow: 0 0 0 2px rgba(108, 117, 125, 0.15);
+        }
+
+        .login-button {
+            width: 100%;
+
+            padding: 12px;
+
+            margin-top: 10px;
+
+            border: none;
+            border-radius: 5px;
+
+            background-color: #212529;
+            color: white;
+
+            font-size: 16px;
+            font-weight: bold;
+
+            cursor: pointer;
+
+            transition: 0.2s;
+        }
+
+        .login-button:hover {
+            background-color: #343a40;
+        }
+
+        .error-message {
+            color: #dc3545;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .login-links {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .login-links a {
+            display: block;
+            margin-top: 10px;
+            color: #555;
+            text-decoration: none;
+        }
+
+        .login-links a:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <!-- ナビバー -->
+    <nav class="custom-navbar fixed-top">
+        <div class="container">
+            <span class="system-name">
+                注文連携型 在庫管理・発注支援システム
+            </span>
+        </div>
+    </nav>
+
+
+    <!-- ログイン画面 -->
+    <main class="login-main">
+
+        <div class="container">
+
+            <div class="login-box">
+
+                <div class="login-title">
+                    <h1>ログイン</h1>
+
+                    {% if error_message %}
+                    <div class="error-message">
+                        {{ error_message }}
+                    </div>
+                    {% endif %}
+                </div>
+
+
+                <form method="POST" action="/login">
+
+                    {% csrf_token %}
+
+                    <div class="form-group">
+                        <label for="employee_id">社員ID</label>
+                        <input
+                            type="text"
+                            id="employee_id"
+                            name="employee_id"
+                            placeholder="社員IDを入力してください"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">
+                            パスワード
+                        </label>
+
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            placeholder="パスワードを入力してください"
+                            required
+                        >
+                    </div>
+
+
+                    <button type="submit" class="login-button">
+                        ログイン
+                    </button>
+
+                    <div class="login-links">
+                        <a href="/account-register">新規アカウント登録</a>
+                        <a href="/forgot-password">パスワードを忘れた場合</a>
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <script src="{% static 'js/scripts.js' %}"></script>
+
+</body>
+</html>

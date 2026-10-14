@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# 仮想環境
+.venv/
+venv/
+
+# SQLiteデータベース
+db.sqlite3
+
+# 環境変数・秘密情報
+.env
+
+# Djangoの生成ファイル
+staticfiles/
