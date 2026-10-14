@@ -8,12 +8,24 @@ User = get_user_model()
 
 
 class AccountCreationForm(forms.Form):
-    """社員IDとパスワードを検証する登録フォーム。"""
+    """社員アカウント作成時の入力内容を検証する。"""
 
     employee_id = forms.CharField(
         label="社員ID",
         max_length=150,
         required=True,
+    )
+
+    full_name = forms.CharField(
+        label="氏名",
+        max_length=150,
+        required=True,
+    )
+
+    store_code = forms.CharField(
+        label="所属店舗コード",
+        max_length=30,
+        required=False,
     )
 
     password1 = forms.CharField(
@@ -33,11 +45,10 @@ class AccountCreationForm(forms.Form):
     def clean_employee_id(self):
         employee_id = self.cleaned_data["employee_id"].strip()
 
-        if not employee_id:
-            raise ValidationError("社員IDを入力してください。")
-
         if User.objects.filter(username=employee_id).exists():
-            raise ValidationError("この社員IDはすでに登録されています。")
+            raise ValidationError(
+                "この社員IDはすでに登録されています。"
+            )
 
         return employee_id
 
@@ -46,7 +57,6 @@ class AccountCreationForm(forms.Form):
         employee_id = self.cleaned_data.get("employee_id", "")
 
         user = User(username=employee_id)
-
         password_validation.validate_password(password, user=user)
 
         return password
@@ -66,7 +76,7 @@ class AccountCreationForm(forms.Form):
         return cleaned_data
 
     def save(self):
-        """検証済みの社員アカウントを登録する。"""
+        """検証済みの社員アカウントを作成する。"""
 
         return User.objects.create_user(
             username=self.cleaned_data["employee_id"],

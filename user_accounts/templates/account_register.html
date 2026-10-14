@@ -5,6 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>新規アカウント登録</title>
 
     <link href="{% static 'css/styles.css' %}" rel="stylesheet">
@@ -85,10 +86,18 @@
             color: #dc3545;
             margin-top: 8px;
         }
+
+        .success-message {
+            color: #198754;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 
 <body>
+
     <nav class="custom-navbar fixed-top">
         <div class="container">
             <span class="system-name">
@@ -100,13 +109,22 @@
     <main class="page-main">
         <div class="container">
             <div class="form-box">
+
                 <div class="page-title">
                     <h1>新規アカウント登録</h1>
                     <p>アカウント情報を入力してください</p>
                 </div>
 
+                {% if success_message %}
+                    <p class="success-message">
+                        {{ success_message }}
+                    </p>
+                {% endif %}
+
                 {% if error_message %}
-                    <p class="error-message">{{ error_message }}</p>
+                    <p class="error-message">
+                        {{ error_message }}
+                    </p>
                 {% endif %}
 
                 <form method="post" action="{% url 'account_register' %}">
@@ -126,6 +144,38 @@
                             <p class="field-error">{{ error }}</p>
                         {% endfor %}
                     </div>
+
+                    <div class="form-group">
+                        <label for="full_name">氏名</label>
+                        <input
+                            type="text"
+                            id="full_name"
+                            name="full_name"
+                            maxlength="150"
+                            value="{{ form.full_name.value|default_if_none:'' }}"
+                            required
+                        >
+                        {% for error in form.full_name.errors %}
+                            <p class="field-error">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+
+                    {% if can_choose_store %}
+                    <div class="form-group">
+                        <label for="store_code">所属店舗コード</label>
+                        <input
+                            type="text"
+                            id="store_code"
+                            name="store_code"
+                            maxlength="30"
+                            value="{{ form.store_code.value|default_if_none:'' }}"
+                            required
+                        >
+                        {% for error in form.store_code.errors %}
+                            <p class="field-error">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
 
                     <div class="form-group">
                         <label for="password1">パスワード</label>
@@ -163,8 +213,10 @@
                         ログイン画面に戻る
                     </a>
                 </div>
+
             </div>
         </div>
     </main>
+
 </body>
 </html>

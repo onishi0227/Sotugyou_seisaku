@@ -1,40 +1,107 @@
-
 from django.contrib.auth import authenticate
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
 from .forms import AccountCreationForm
+from .models import EmployeeProfile
 
 
 @require_http_methods(["GET", "POST"])
 def account_register(request):
-    """アカウントを新規登録する。"""
+    """権限に応じて社員アカウントを作成する。"""
+
+    # 未ログインの人は登録画面を利用できない
+    if not request.user.is_authenticated:
+        return redirect("login")
+
+    # 社員の権限情報を取得する
+    try:
+        profile = request.user.employee_profile
+    except EmployeeProfile.DoesNotExist:
+        return HttpResponseForbidden(
+            "アカウント作成の権限が設定されていません。"
+        )
+
+    # 本社管理者は店長を、店長は店員を作成できる
+    if profile.role == EmployeeProfile.Role.HEADQUARTERS_ADMIN:
+        target_role = EmployeeProfile.Role.STORE_MANAGER
+        can_choose_store = True
+
+    elif profile.role == EmployeeProfile.Role.STORE_MANAGER:
+        target_role = EmployeeProfile.Role.STAFF
+        can_choose_store = False
+
+        if not profile.store_code:
+            return HttpResponseForbidden(
+                "所属店舗が設定されていないため、店員を作成できません。"
+            )
+
+    else:
+        return HttpResponseForbidden(
+            "アカウントを作成する権限がありません。"
+        )
 
     if request.method == "POST":
         form = AccountCreationForm(request.POST)
 
         if form.is_valid():
-            form.save()
-            return redirect("login")
+            if can_choose_store:
+                # 本社管理者が作る店長には所属店舗を指定する
+                store_code = form.cleaned_data["store_code"].strip()
 
-        return render(
-            request,
-            "account_register.html",
-            {
-                "form": form,
-                "error_message": "入力内容を確認してください。",
-            },
-        )
+                if not store_code:
+                    form.add_error(
+                        "store_code",
+                        "所属店舗コードを入力してください。",
+                    )
+            else:
+                # 店長が作る店員は、自分と同じ店舗に所属させる
+                store_code = profile.store_code
 
-    form = AccountCreationForm()
+            if not form.errors:
+                new_user = form.save()
+
+                EmployeeProfile.objects.create(
+                    user=new_user,
+                    role=target_role,
+                    full_name=form.cleaned_data["full_name"].strip(),
+                    store_code=store_code,
+                )
+
+                # 作成したアカウントの情報を残さず、フォームを初期化する
+                return render(
+                    request,
+                    "account_register.html",
+                    {
+                        "form": AccountCreationForm(),
+                        "can_choose_store": can_choose_store,
+                        "target_role_label": (
+                            "店長"
+                            if can_choose_store
+                            else "店員"
+                        ),
+                        "success_message": (
+                            f"{'店長' if can_choose_store else '店員'}"
+                            "アカウントを登録しました。"
+                        ),
+                    },
+                )
+    else:
+        form = AccountCreationForm()
 
     return render(
         request,
         "account_register.html",
-        {"form": form},
+        {
+            "form": form,
+            "can_choose_store": can_choose_store,
+            "target_role_label": (
+                "店長" if can_choose_store else "店員"
+            ),
+        },
     )
 
 
@@ -43,8 +110,6 @@ def login_view(request):
     """社員IDとパスワードでログインする。"""
 
     if request.method == "POST":
-        # 社員IDを受け取る。
-        # 古いHTMLとの互換性のため、旧入力名にも対応する。
         employee_id = (
             request.POST.get("employee_id")
             or request.POST.get("username")
