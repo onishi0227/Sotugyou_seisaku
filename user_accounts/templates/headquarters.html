@@ -1,0 +1,200 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本社管理者用画面</title>
+
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        /* ナビゲーション */
+        .custom-navbar {
+            background-color: #212529;
+            padding: 18px 0;
+            z-index: 1030;
+            position: relative;
+        }
+
+        .system-name {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .user-icon {
+            position: absolute;
+            top: 50%;
+            right: 30px;
+            transform: translateY(-50%);
+            color: white !important;
+            font-size: 22px;
+            text-decoration: none !important;
+            z-index: 9999;
+        }
+
+        .user-icon:hover {
+            color: #cccccc !important;
+        }
+
+        /* メイン部分 */
+        .headquarters-main {
+            padding-top: 100px;
+            padding-bottom: 80px;
+        }
+
+        /* ページタイトル */
+        .page-title {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .page-title h1 {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .page-title p {
+            color: #777;
+        }
+
+        /* メニューを2つ横並びにする */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 30px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* ボタンの基本スタイル */
+        .menu-card {
+            display: block;
+            background-color: white;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            text-decoration: none;
+            color: #212529;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s,
+                        box-shadow 0.2s,
+                        border-color 0.2s;
+        }
+
+        /* マウスを乗せたとき */
+        .menu-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+            border-color: #feb806;
+            color: #212529;
+            text-decoration: none;
+        }
+
+        /* アイコン */
+        .menu-icon {
+            font-size: 42px;
+            margin-bottom: 20px;
+        }
+
+        /* ボタンのタイトル */
+        .menu-card h3 {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #212529;
+        }
+
+        .menu-card p {
+            color: #777;
+            margin-bottom: 0;
+        }
+
+        /* スマートフォン */
+        @media (max-width: 576px) {
+            .system-name {
+                font-size: 15px;
+            }
+
+            .user-icon {
+                right: 15px;
+            }
+
+            .headquarters-main {
+                padding-top: 90px;
+            }
+
+            .menu-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ナビゲーション -->
+    <nav class="custom-navbar fixed-top">
+        <div class="container">
+
+            <span class="system-name">
+                注文連携型 在庫管理・発注支援システム
+            </span>
+
+            <a href="{% url 'logout' %}"
+               class="user-icon"
+               title="ログアウト">
+                <i class="fa-solid fa-user"></i>
+            </a>
+
+        </div>
+    </nav>
+
+    <!-- メインコンテンツ -->
+    <main class="headquarters-main">
+        <div class="container">
+
+            <!-- タイトル -->
+            <div class="page-title">
+                <h1>本社管理者用画面</h1>
+                <p>発注・在庫・マスタ情報を管理できます</p>
+            </div>
+
+            <!-- メニュー -->
+            <div class="menu-grid">
+
+                <!-- 発注 -->
+                <a href="#" class="menu-card">
+                    <div class="menu-icon warning-icon">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                    </div>
+
+                    <h3>発注</h3>
+
+                    <p>発注情報を管理します</p>
+                </a>
+
+                <!-- マスタ管理 -->
+                    <a href="{% url 'headquarters_master' %}" class="menu-card">
+                        <div class="menu-icon">
+                            <i class="fa-solid fa-database"></i>
+                        </div>
+
+                        <h3>マスタ管理</h3>
+
+                        <p>各種マスタ情報を管理します</p>
+                    </a>
+
+            </div>
+        </div>
+    </main>
+
+    <script src="{% static 'js/scripts.js' %}"></script>
+
+</body>
+</html>

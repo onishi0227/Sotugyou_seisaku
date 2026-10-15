@@ -1,4 +1,3 @@
-
 {% load static %}
 <!DOCTYPE html>
 <html lang="ja">
@@ -23,21 +22,17 @@
         }
 
         .login-main {
-            padding-top: 150px;
+            padding-top: 100px;
             padding-bottom: 80px;
         }
 
         .login-box {
             max-width: 450px;
             margin: 0 auto;
-
             padding: 40px;
-
             background-color: white;
-
             border: 2px solid #dee2e6;
             border-radius: 10px;
-
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
         }
 
@@ -69,12 +64,9 @@
         .form-group input {
             width: 100%;
             box-sizing: border-box;
-
             padding: 12px;
-
             border: 1px solid #ced4da;
             border-radius: 5px;
-
             font-size: 16px;
         }
 
@@ -84,36 +76,36 @@
             box-shadow: 0 0 0 2px rgba(108, 117, 125, 0.15);
         }
 
-        .login-button {
-            width: 100%;
-
-            padding: 12px;
-
-            margin-top: 10px;
-
-            border: none;
-            border-radius: 5px;
-
-            background-color: #212529;
-            color: white;
-
-            font-size: 16px;
-            font-weight: bold;
-
-            cursor: pointer;
-
-            transition: 0.2s;
-        }
-
-        .login-button:hover {
-            background-color: #343a40;
-        }
-
         .error-message {
             color: #dc3545;
             text-align: center;
             font-weight: bold;
             margin-bottom: 20px;
+        }
+
+        .field-error {
+            display: block;
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 6px;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #212529;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .login-button:hover {
+            background-color: #343a40;
         }
 
         .login-links {
@@ -131,13 +123,12 @@
         .login-links a:hover {
             text-decoration: underline;
         }
-
     </style>
 </head>
 
 <body>
 
-    <!-- ナビバー -->
+    <!-- ナビゲーション -->
     <nav class="custom-navbar fixed-top">
         <div class="container">
             <span class="system-name">
@@ -146,72 +137,170 @@
         </div>
     </nav>
 
-
     <!-- ログイン画面 -->
     <main class="login-main">
-
         <div class="container">
-
             <div class="login-box">
 
                 <div class="login-title">
-                    <h1>ログイン</h1>
+                    <h1>{{ portal_label|default:"ログイン" }}</h1>
 
                     {% if error_message %}
-                    <div class="error-message">
+                    <div class="error-message" role="alert">
                         {{ error_message }}
                     </div>
                     {% endif %}
                 </div>
 
-
-                <form method="POST" action="/login">
-
+                <!-- Djangoのログイン処理へ送信 -->
+                <form
+                    id="loginForm"
+                    method="post"
+                    action="{% url 'login' %}"
+                    novalidate
+                >
                     {% csrf_token %}
 
+                    <!-- 社員ID -->
                     <div class="form-group">
                         <label for="employee_id">社員ID</label>
+
                         <input
                             type="text"
                             id="employee_id"
                             name="employee_id"
                             placeholder="社員IDを入力してください"
+                            autocomplete="username"
+                            aria-describedby="employeeIdError"
                             required
                         >
+
+                        <span
+                            id="employeeIdError"
+                            class="field-error"
+                            role="alert"
+                            hidden
+                        ></span>
                     </div>
 
+                    <!-- パスワード -->
                     <div class="form-group">
-                        <label for="password">
-                            パスワード
-                        </label>
+                        <label for="password">パスワード</label>
 
                         <input
                             type="password"
                             id="password"
                             name="password"
                             placeholder="パスワードを入力してください"
+                            autocomplete="current-password"
+                            aria-describedby="passwordError"
                             required
                         >
+
+                        <span
+                            id="passwordError"
+                            class="field-error"
+                            role="alert"
+                            hidden
+                        ></span>
                     </div>
 
-
+                    <!-- ログインボタン -->
                     <button type="submit" class="login-button">
                         ログイン
                     </button>
-
-                    <div class="login-links">
-                        <a href="/account-register">新規アカウント登録</a>
-                        <a href="/forgot-password">パスワードを忘れた場合</a>
-                    </div>
-
                 </form>
 
             </div>
-
         </div>
-
     </main>
 
+    <!-- 入力チェック -->
+    <script>
+        const loginForm = document.getElementById("loginForm");
+        const employeeId = document.getElementById("employee_id");
+        const password = document.getElementById("password");
+
+        const employeeIdError =
+            document.getElementById("employeeIdError");
+
+        const passwordError =
+            document.getElementById("passwordError");
+
+        function showError(input, errorElement, message) {
+            errorElement.textContent = message;
+            errorElement.hidden = false;
+            input.setAttribute("aria-invalid", "true");
+        }
+
+        function clearError(input, errorElement) {
+            errorElement.textContent = "";
+            errorElement.hidden = true;
+            input.removeAttribute("aria-invalid");
+        }
+
+        // 社員IDが入力されているか確認する
+        function validateEmployeeId() {
+            clearError(employeeId, employeeIdError);
+
+            if (employeeId.value.trim() === "") {
+                showError(
+                    employeeId,
+                    employeeIdError,
+                    "社員IDを入力してください。"
+                );
+                return false;
+            }
+
+            return true;
+        }
+
+        // パスワードが入力されているか確認する
+        function validatePassword() {
+            clearError(password, passwordError);
+
+            if (password.value === "") {
+                showError(
+                    password,
+                    passwordError,
+                    "パスワードを入力してください。"
+                );
+                return false;
+            }
+
+            return true;
+        }
+
+        employeeId.addEventListener("input", () => {
+            if (employeeId.value.trim() === "") {
+                clearError(employeeId, employeeIdError);
+            } else {
+                clearError(employeeId, employeeIdError);
+            }
+        });
+
+        password.addEventListener("input", () => {
+            if (password.value !== "") {
+                clearError(password, passwordError);
+            }
+        });
+
+        // 入力チェックに成功したらDjangoへ送信する
+        loginForm.addEventListener("submit", (event) => {
+            const employeeIdValid = validateEmployeeId();
+            const passwordValid = validatePassword();
+
+            if (!employeeIdValid || !passwordValid) {
+                event.preventDefault();
+
+                if (!employeeIdValid) {
+                    employeeId.focus();
+                } else {
+                    password.focus();
+                }
+            }
+        });
+    </script>
 
     <script src="{% static 'js/scripts.js' %}"></script>
 

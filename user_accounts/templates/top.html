@@ -1,0 +1,173 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>トップ画面</title>
+
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        .custom-navbar {
+            background-color: #212529;
+            padding: 18px 0;
+        }
+
+        .system-name {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .top-main {
+            padding-top: 100px;
+            padding-bottom: 80px;
+        }
+
+        .top-title {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .top-title h1 {
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .top-title p {
+            color: #777;
+        }
+
+        .menu-container {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(280px, 400px));
+            justify-content: center;
+            gap: 40px;
+            width: 100%;
+        }
+
+        .menu-card-link {
+            display: block;
+            width: 100%;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .menu-card-link:hover {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .menu-card {
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            padding: 35px 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            background-color: white;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .menu-card-link:hover .menu-card {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+            border-color: #feb806;
+        }
+
+        .menu-icon {
+            font-size: 50px;
+            margin-bottom: 20px;
+        }
+
+        .menu-card h3 {
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .menu-card p {
+            color: #777;
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 992px) {
+            .menu-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ナビバー -->
+    <nav class="custom-navbar fixed-top">
+        <div class="container">
+            <span class="system-name">
+                注文連携型 在庫管理・発注支援システム
+            </span>
+        </div>
+    </nav>
+
+    <!-- トップ画面 -->
+    <main class="top-main">
+        <div class="container">
+
+            <div class="top-title">
+                <h1>トップ画面</h1>
+                <p>利用する画面を選択してください</p>
+            </div>
+
+            <div class="menu-container">
+
+                <!-- 店舗用 -->
+                <a href="{% url 'select_store_portal' %}"
+                   class="menu-card-link">
+                    <div class="menu-card">
+
+                        <div class="menu-icon">
+                            <i class="fa-solid fa-store"></i>
+                        </div>
+
+                        <h3>店舗管理者用</h3>
+
+                        <p>
+                            店舗スタッフはこちら
+                        </p>
+
+                    </div>
+                </a>
+
+                <!-- 本社用 -->
+                <a href="{% url 'select_headquarters_portal' %}"
+                   class="menu-card-link">
+                    <div class="menu-card">
+
+                        <div class="menu-icon">
+                            <i class="fa-solid fa-building"></i>
+                        </div>
+
+                        <h3>本社管理者用</h3>
+
+                        <p>
+                            本社スタッフはこちら
+                        </p>
+
+                    </div>
+                </a>
+
+            </div>
+
+        </div>
+    </main>
+
+    <script src="{% static 'js/scripts.js' %}"></script>
+
+</body>
+</html>

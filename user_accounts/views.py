@@ -1,36 +1,102 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_GET, require_http_methods
 
 from .forms import AccountCreationForm
 from .models import EmployeeProfile
+
+
+# ログイン前に選択した入口をセッションに保存する
+LOGIN_PORTAL_SESSION_KEY = "login_portal"
+
+STORE_PORTAL = "store"
+HEADQUARTERS_PORTAL = "headquarters"
+
+
+def _get_employee_profile(user):
+    """ユーザーに紐づく社員プロフィールを取得する。"""
+    try:
+        return user.employee_profile
+    except EmployeeProfile.DoesNotExist:
+        return None
+
+
+def _redirect_to_role_home(user):
+    """ログイン済みユーザーの権限に応じてトップ画面へ移動する。"""
+    profile = _get_employee_profile(user)
+
+    if profile is None:
+        return HttpResponseForbidden(
+            "アカウントの権限が設定されていません。管理者に確認してください。"
+        )
+
+    if profile.role == EmployeeProfile.Role.HEADQUARTERS_ADMIN:
+        return redirect("headquarters_top")
+
+    if profile.role in (
+        EmployeeProfile.Role.STORE_MANAGER,
+        EmployeeProfile.Role.STAFF,
+    ):
+        return redirect("store_top")
+
+    return HttpResponseForbidden(
+        "有効な権限が設定されていません。"
+    )
+
+
+def entry_view(request):
+    """S-00 トップ画面を表示する。"""
+    if request.user.is_authenticated:
+        return _redirect_to_role_home(request.user)
+
+    return render(request, "top.html")
+
+
+def _select_login_portal(request, portal):
+    """ログイン先をセッションに保存して共通ログイン画面へ移動する。"""
+    if request.user.is_authenticated:
+        return _redirect_to_role_home(request.user)
+
+    request.session[LOGIN_PORTAL_SESSION_KEY] = portal
+    return redirect("login")
+
+
+@require_GET
+def select_store_portal(request):
+    """店舗側ログインを選択する。"""
+    return _select_login_portal(request, STORE_PORTAL)
+
+
+@require_GET
+def select_headquarters_portal(request):
+    """本社側ログインを選択する。"""
+    return _select_login_portal(request, HEADQUARTERS_PORTAL)
 
 
 @require_http_methods(["GET", "POST"])
 def account_register(request):
     """権限に応じて社員アカウントを作成する。"""
 
-    # 未ログインの人は登録画面を利用できない
     if not request.user.is_authenticated:
         return redirect("login")
 
-    # 社員の権限情報を取得する
-    try:
-        profile = request.user.employee_profile
-    except EmployeeProfile.DoesNotExist:
+    profile = _get_employee_profile(request.user)
+
+    if profile is None:
         return HttpResponseForbidden(
             "アカウント作成の権限が設定されていません。"
         )
 
-    # 本社管理者は店長を、店長は店員を作成できる
     if profile.role == EmployeeProfile.Role.HEADQUARTERS_ADMIN:
+        # 本社管理者は店長を作成する
         target_role = EmployeeProfile.Role.STORE_MANAGER
         can_choose_store = True
 
     elif profile.role == EmployeeProfile.Role.STORE_MANAGER:
+        # 店長は自分の店舗の店員を作成する
         target_role = EmployeeProfile.Role.STAFF
         can_choose_store = False
 
@@ -49,7 +115,6 @@ def account_register(request):
 
         if form.is_valid():
             if can_choose_store:
-                # 本社管理者が作る店長には所属店舗を指定する
                 store_code = form.cleaned_data["store_code"].strip()
 
                 if not store_code:
@@ -58,7 +123,7 @@ def account_register(request):
                         "所属店舗コードを入力してください。",
                     )
             else:
-                # 店長が作る店員は、自分と同じ店舗に所属させる
+                # 店長が作成する店員は店長と同じ店舗に所属させる
                 store_code = profile.store_code
 
             if not form.errors:
@@ -71,24 +136,23 @@ def account_register(request):
                     store_code=store_code,
                 )
 
-                # 作成したアカウントの情報を残さず、フォームを初期化する
+                target_role_label = (
+                    "店長" if can_choose_store else "店員"
+                )
+
                 return render(
                     request,
                     "account_register.html",
                     {
                         "form": AccountCreationForm(),
                         "can_choose_store": can_choose_store,
-                        "target_role_label": (
-                            "店長"
-                            if can_choose_store
-                            else "店員"
-                        ),
+                        "target_role_label": target_role_label,
                         "success_message": (
-                            f"{'店長' if can_choose_store else '店員'}"
-                            "アカウントを登録しました。"
+                            f"{target_role_label}アカウントを登録しました。"
                         ),
                     },
                 )
+
     else:
         form = AccountCreationForm()
 
@@ -107,7 +171,22 @@ def account_register(request):
 
 @require_http_methods(["GET", "POST"])
 def login_view(request):
-    """社員IDとパスワードでログインする。"""
+    """共通ログイン画面。入口とアカウント権限を照合する。"""
+
+    portal = request.session.get(LOGIN_PORTAL_SESSION_KEY)
+
+    # 入口を選択せずに直接ログイン画面を開いた場合は入口へ戻す
+    if portal not in (STORE_PORTAL, HEADQUARTERS_PORTAL):
+        return redirect("entry")
+
+    portal_label = (
+        "店舗ログイン"
+        if portal == STORE_PORTAL
+        else "本社ログイン"
+    )
+
+    if request.user.is_authenticated:
+        return _redirect_to_role_home(request.user)
 
     if request.method == "POST":
         employee_id = (
@@ -125,41 +204,177 @@ def login_view(request):
             password=password,
         )
 
-        if user is not None:
+        if user is None:
+            return render(
+                request,
+                "login.html",
+                {
+                    "portal": portal,
+                    "portal_label": portal_label,
+                    "error_message": (
+                        "社員IDまたはパスワードが正しくありません。"
+                    ),
+                },
+            )
+
+        profile = _get_employee_profile(user)
+
+        if profile is None:
+            return render(
+                request,
+                "login.html",
+                {
+                    "portal": portal,
+                    "portal_label": portal_label,
+                    "error_message": (
+                        "アカウントの権限が設定されていません。"
+                        "管理者に確認してください。"
+                    ),
+                },
+            )
+
+        # 店舗入口では、店長または店員だけを許可する
+        if portal == STORE_PORTAL:
+            allowed_roles = (
+                EmployeeProfile.Role.STORE_MANAGER,
+                EmployeeProfile.Role.STAFF,
+            )
+
+            if profile.role not in allowed_roles:
+                return render(
+                    request,
+                    "login.html",
+                    {
+                        "portal": portal,
+                        "portal_label": portal_label,
+                        "error_message": (
+                            "このアカウントは本社用です。"
+                            "店舗用の入口からはログインできません。"
+                        ),
+                    },
+                )
+
             auth_login(request, user)
-            return redirect("login_success")
+            return redirect("store_top")
 
-        return render(
-            request,
-            "login.html",
-            {
-                "error_message": (
-                    "社員IDまたはパスワードが正しくありません。"
-                ),
-            },
-        )
+        # 本社入口では、本社管理者だけを許可する
+        if portal == HEADQUARTERS_PORTAL:
+            if profile.role != EmployeeProfile.Role.HEADQUARTERS_ADMIN:
+                return render(
+                    request,
+                    "login.html",
+                    {
+                        "portal": portal,
+                        "portal_label": portal_label,
+                        "error_message": (
+                            "このアカウントは店舗用です。"
+                            "本社用の入口からはログインできません。"
+                        ),
+                    },
+                )
 
-    return render(request, "login.html")
+            auth_login(request, user)
+            return redirect("headquarters_top")
+
+    return render(
+        request,
+        "login.html",
+        {
+            "portal": portal,
+            "portal_label": portal_label,
+        },
+    )
 
 
 def login_success(request):
-    """ログイン成功後の一時的な確認先。"""
+    """旧ログイン成功URLから来た場合も権限に応じて振り分ける。"""
+    if not request.user.is_authenticated:
+        return redirect("entry")
+
+    return _redirect_to_role_home(request.user)
+
+
+@require_GET
+def store_top(request):
+    """S-08 店舗トップ画面を表示する。"""
 
     if not request.user.is_authenticated:
-        return redirect("login")
+        return redirect("entry")
 
-    return HttpResponse(
-        "ログインに成功しました。"
-        "画面担当のHTMLとの接続後に、適切な画面へ遷移させます。"
-    )
+    profile = _get_employee_profile(request.user)
+
+    if (
+        profile is None
+        or profile.role not in (
+            EmployeeProfile.Role.STORE_MANAGER,
+            EmployeeProfile.Role.STAFF,
+        )
+        or request.session.get(LOGIN_PORTAL_SESSION_KEY) != STORE_PORTAL
+    ):
+        return HttpResponseForbidden(
+            "店舗トップ画面を表示する権限がありません。"
+        )
+
+    context = {
+        "is_store_manager": (
+            profile.role == EmployeeProfile.Role.STORE_MANAGER
+        ),
+    }
+
+    return render(request, "store.html", context)
+
+
+@require_GET
+def headquarters_top(request):
+    """S-16 本社管理者トップ画面を表示する。"""
+
+    if not request.user.is_authenticated:
+        return redirect("entry")
+
+    profile = _get_employee_profile(request.user)
+
+    if (
+        profile is None
+        or profile.role != EmployeeProfile.Role.HEADQUARTERS_ADMIN
+        or request.session.get(LOGIN_PORTAL_SESSION_KEY)
+        != HEADQUARTERS_PORTAL
+    ):
+        return HttpResponseForbidden(
+            "本社トップ画面を表示する権限がありません。"
+        )
+
+    return render(request, "headquarters.html")
+
+
+@require_GET
+def headquarters_master(request):
+    """S-21 本社管理者用マスタ管理画面を表示する。"""
+
+    if not request.user.is_authenticated:
+        return redirect("entry")
+
+    profile = _get_employee_profile(request.user)
+
+    # 本社管理者以外はマスタ管理画面を表示できない
+    if (
+        profile is None
+        or profile.role != EmployeeProfile.Role.HEADQUARTERS_ADMIN
+        or request.session.get(LOGIN_PORTAL_SESSION_KEY)
+        != HEADQUARTERS_PORTAL
+    ):
+        return HttpResponseForbidden(
+            "マスタ管理画面を表示する権限がありません。"
+        )
+
+    return render(request, "master.html")
 
 
 @require_http_methods(["GET", "POST"])
 def logout_view(request):
-    """ログアウト確認画面を表示し、POSTでログアウトする。"""
+    """ログアウト後は入口選択画面へ戻す。"""
 
     if request.method == "POST":
         auth_logout(request)
-        return redirect("login")
+        return redirect("entry")
 
     return render(request, "logout.html")

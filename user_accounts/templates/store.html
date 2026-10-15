@@ -1,0 +1,281 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>店舗管理者用画面</title>
+
+    <!-- 共通CSS -->
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        /* ナビバー */
+        .custom-navbar {
+            background-color: #212529;
+            padding: 18px 0;
+            z-index: 1030;
+            position: relative;
+        }
+
+        .system-name {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* ユーザーアイコン */
+        .user-icon {
+            position: absolute;
+            top: 50%;
+            right: 30px;
+            transform: translateY(-50%);
+            color: white !important;
+            font-size: 22px;
+            text-decoration: none !important;
+            z-index: 9999;
+        }
+
+        .user-icon:hover {
+            color: #cccccc !important;
+        }
+
+        /* メイン部分 */
+        .store-main {
+            padding-top: 100px;
+            padding-bottom: 0;
+        }
+
+        /* タイトル */
+        .store-title {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .store-title h1 {
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .store-title p {
+            color: #777;
+        }
+
+        /* セクションタイトル */
+        .menu-section-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        /* 共通管理メニュー */
+        .management-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            width: 100%;
+        }
+
+        /* 管理カード */
+        .management-card {
+            box-sizing: border-box;
+            min-height: 190px;
+            padding: 30px 25px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            background-color: white;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.2s,
+                        box-shadow 0.2s,
+                        border-color 0.2s;
+        }
+
+        /* カードにカーソルを合わせたとき */
+        .management-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+            border-color: #feb806;
+            color: inherit;
+            text-decoration: none;
+        }
+
+        /* 管理タイトル */
+        .management-title {
+            text-align: center;
+        }
+
+        .management-title .management-icon {
+            font-size: 45px;
+            margin-bottom: 15px;
+        }
+
+        .management-title h3 {
+            font-weight: bold;
+            margin-bottom: 0;
+        }
+
+        /* 店長用メニュー */
+        .manager-section {
+            margin-top: 60px;
+        }
+
+        .manager-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            width: 100%;
+        }
+
+        /* タブレット・スマートフォン */
+        @media (max-width: 992px) {
+            .management-container,
+            .manager-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- ナビバー -->
+<nav class="custom-navbar fixed-top">
+    <div class="container">
+
+        <span class="system-name">
+            注文連携型 在庫管理・発注支援システム
+        </span>
+
+        <a href="{% url 'logout' %}"
+           class="user-icon"
+           title="ログアウト">
+            <i class="fa-solid fa-user"></i>
+        </a>
+
+    </div>
+</nav>
+
+<!-- メイン -->
+<main class="store-main">
+    <div class="container">
+
+        <!-- タイトル -->
+        <div class="store-title">
+            <h1>店舗管理者用画面</h1>
+            <p>操作する項目を選択してください</p>
+        </div>
+
+        <!-- 店員・店長共通メニュー -->
+        <div class="menu-section">
+
+            <div class="menu-section-title">
+                店員・店長共通
+            </div>
+
+            <div class="management-container">
+
+                <!-- 注文 -->
+                <a href="#" class="management-card">
+                    <div class="management-title">
+                        <div class="management-icon">
+                            <i class="fa-solid fa-receipt"></i>
+                        </div>
+                        <h3>注文</h3>
+                    </div>
+                </a>
+
+                <!-- 会計待ち一覧 -->
+                <a href="#" class="management-card">
+                    <div class="management-title">
+                        <div class="management-icon">
+                            <i class="fa-solid fa-cash-register"></i>
+                        </div>
+                        <h3>会計待ち一覧</h3>
+                    </div>
+                </a>
+
+                <!-- 在庫一覧 -->
+                <a href="#" class="management-card">
+                    <div class="management-title">
+                        <div class="management-icon">
+                            <i class="fa-solid fa-boxes-stacked"></i>
+                        </div>
+                        <h3>在庫一覧</h3>
+                    </div>
+                </a>
+
+            </div>
+        </div>
+
+        <!-- 店長だけに表示するメニュー -->
+        {% if is_store_manager %}
+        <div class="manager-section">
+
+            <div class="menu-section-title">
+                店長用
+            </div>
+
+            <div class="manager-container">
+
+                <!-- 棚卸登録 -->
+                <a href="#" class="management-card">
+                    <div class="management-title">
+                        <div class="management-icon">
+                            <i class="fa-solid fa-clipboard-check"></i>
+                        </div>
+                        <h3>棚卸登録</h3>
+                    </div>
+                </a>
+
+                <!-- 在庫切れ予測 -->
+                <a href="#" class="management-card">
+                    <div class="management-title">
+                        <div class="management-icon">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </div>
+                        <h3>在庫切れ予測</h3>
+                    </div>
+                </a>
+
+                <!-- 発注登録・履歴 -->
+                <a href="#" class="management-card">
+                    <div class="management-title">
+                        <div class="management-icon">
+                            <i class="fa-solid fa-truck"></i>
+                        </div>
+                        <h3>発注登録・履歴</h3>
+                    </div>
+                </a>
+
+                <!-- 店員アカウント管理 -->
+                <a href="{% url 'account_register' %}"
+                   class="management-card">
+                    <div class="management-title">
+                        <div class="management-icon">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <h3>店員アカウント管理</h3>
+                    </div>
+                </a>
+
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</main>
+
+<!-- JavaScript -->
+<script src="{% static 'js/scripts.js' %}"></script>
+
+</body>
+</html>
