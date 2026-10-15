@@ -26,6 +26,15 @@ def _get_employee_profile(user):
         return None
 
 
+def _record_active_session(request, profile):
+    """現在のログインセッションを社員プロフィールに記録する。"""
+    if request.session.session_key is None:
+        request.session.save()
+
+    profile.active_session_key = request.session.session_key
+    profile.save(update_fields=["active_session_key"])
+
+
 def _redirect_to_role_home(user):
     """ログイン済みユーザーを権限に応じたトップ画面へ移動する。"""
     profile = _get_employee_profile(user)
@@ -171,7 +180,7 @@ def account_register(request):
 @never_cache
 @require_http_methods(["GET", "POST"])
 def login_view(request):
-    """共通ログイン画面。ログイン後は権限に応じて移動する。"""
+    """共通ログイン画面。入口とアカウント権限を照合する。"""
 
     portal = request.session.get(LOGIN_PORTAL_SESSION_KEY)
 
@@ -184,7 +193,6 @@ def login_view(request):
         else "本社ログイン"
     )
 
-    # ログイン済みならログイン画面を表示しない
     if request.user.is_authenticated:
         return _redirect_to_role_home(request.user)
 
@@ -254,6 +262,7 @@ def login_view(request):
                 )
 
             auth_login(request, user)
+            _record_active_session(request, profile)
             return redirect("store_top")
 
         if portal == HEADQUARTERS_PORTAL:
@@ -272,6 +281,7 @@ def login_view(request):
                 )
 
             auth_login(request, user)
+            _record_active_session(request, profile)
             return redirect("headquarters_top")
 
     return render(
@@ -286,7 +296,7 @@ def login_view(request):
 
 @never_cache
 def login_success(request):
-    """ログイン成功URLから来た場合も権限に応じて振り分ける。"""
+    """旧ログイン成功URLから来た場合も権限に応じて振り分ける。"""
     if not request.user.is_authenticated:
         return redirect("entry")
 
@@ -409,9 +419,20 @@ def customer_menu(request, store_id, table_no):
 @never_cache
 @require_http_methods(["GET", "POST"])
 def logout_view(request):
-    """ログアウト後は入口選択画面へ戻す。"""
+    """ログアウト時に現在のセッション情報を解除する。"""
 
     if request.method == "POST":
+        if request.user.is_authenticated:
+            profile = _get_employee_profile(request.user)
+
+            if (
+                profile is not None
+                and profile.active_session_key
+                == request.session.session_key
+            ):
+                profile.active_session_key = ""
+                profile.save(update_fields=["active_session_key"])
+
         auth_logout(request)
         return redirect("entry")
 

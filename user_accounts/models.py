@@ -37,6 +37,14 @@ class EmployeeProfile(models.Model):
         verbose_name="所属店舗コード",
     )
 
+    # 現在有効なログインセッション
+    active_session_key = models.CharField(
+        max_length=40,
+        blank=True,
+        default="",
+        verbose_name="有効なログインセッション",
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name="作成日時",
