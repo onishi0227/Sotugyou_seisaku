@@ -1,3 +1,4 @@
+
 {% load static %}
 <!DOCTYPE html>
 <html lang="ja">
@@ -132,47 +133,27 @@
 
         <div class="product-list">
 
-            <!-- 商品1 -->
+            {% for product in products %}
             <div class="product-card">
                 <div class="product-image">
                     商品画像
                 </div>
-                <div class="product-info">
-                    <p class="product-name">商品A</p>
-                    <p class="product-price">￥500</p>
-                    <button class="detail-button" type="button">
-                        商品詳細
-                    </button>
-                </div>
-            </div>
 
-            <!-- 商品2 -->
-            <div class="product-card">
-                <div class="product-image">
-                    商品画像
-                </div>
                 <div class="product-info">
-                    <p class="product-name">商品B</p>
-                    <p class="product-price">￥800</p>
-                    <button class="detail-button" type="button">
-                        商品詳細
-                    </button>
-                </div>
-            </div>
+                    <p class="product-name">{{ product.name }}</p>
 
-            <!-- 商品3 -->
-            <div class="product-card">
-                <div class="product-image">
-                    商品画像
-                </div>
-                <div class="product-info">
-                    <p class="product-name">商品C</p>
-                    <p class="product-price">￥1,000</p>
+                    <p class="product-price">
+                        ￥{{ product.price }}
+                    </p>
+
                     <button class="detail-button" type="button">
                         商品詳細
                     </button>
                 </div>
             </div>
+            {% empty %}
+            <p>現在、販売中の商品はありません。</p>
+            {% endfor %}
 
         </div>
     </main>

@@ -1,3 +1,4 @@
+
 from django.conf import settings
 from django.db import models
 
@@ -48,3 +49,54 @@ class EmployeeProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} ({self.get_role_display()})"
+
+
+class MenuItem(models.Model):
+    """店舗ごとのメニュー商品を管理するモデル。"""
+
+    store_id = models.PositiveIntegerField(
+        db_index=True,
+        verbose_name="店舗ID",
+    )
+
+    name = models.CharField(
+        max_length=100,
+        verbose_name="商品名",
+    )
+
+    description = models.TextField(
+        blank=True,
+        verbose_name="商品説明",
+    )
+
+    price = models.PositiveIntegerField(
+        verbose_name="価格（円）",
+    )
+
+    is_available = models.BooleanField(
+        default=True,
+        verbose_name="販売中",
+    )
+
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        verbose_name="表示順",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="登録日時",
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="更新日時",
+    )
+
+    class Meta:
+        verbose_name = "メニュー商品"
+        verbose_name_plural = "メニュー商品"
+        ordering = ["sort_order", "id"]
+
+    def __str__(self):
+        return f"{self.name}（店舗ID：{self.store_id}）"

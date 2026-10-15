@@ -7,7 +7,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 
 from .forms import AccountCreationForm
-from .models import EmployeeProfile
+from .models import EmployeeProfile, MenuItem
 
 
 # ログイン前に選択した入口をセッションに保存する
@@ -229,6 +229,7 @@ def login_view(request):
                 },
             )
 
+        # 店舗入口では、店長または店員だけを許可する
         if portal == STORE_PORTAL:
             allowed_roles = (
                 EmployeeProfile.Role.STORE_MANAGER,
@@ -252,6 +253,7 @@ def login_view(request):
             auth_login(request, user)
             return redirect("store_top")
 
+        # 本社入口では、本社管理者だけを許可する
         if portal == HEADQUARTERS_PORTAL:
             if profile.role != EmployeeProfile.Role.HEADQUARTERS_ADMIN:
                 return render(
@@ -379,15 +381,22 @@ def customer_order(request, store_id, table_no):
 
 @require_GET
 def customer_menu(request, store_id, table_no):
-    """お客様用画面から開く商品一覧画面。ログインは不要。"""
+    """店舗・テーブルに対応したメニュー商品一覧を表示する。"""
 
     # QRコードで指定された店舗とテーブル番号を引き継ぐ
     request.session["store_id"] = store_id
     request.session["table_no"] = table_no
 
+    # 指定された店舗の、販売中の商品だけを取得する
+    products = MenuItem.objects.filter(
+        store_id=store_id,
+        is_available=True,
+    )
+
     context = {
         "store_id": store_id,
         "table_no": table_no,
+        "products": products,
     }
 
     return render(request, "product_list.html", context)
