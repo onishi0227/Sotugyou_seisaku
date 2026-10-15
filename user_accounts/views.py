@@ -1,3 +1,4 @@
+
 from django.contrib.auth import authenticate
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
@@ -42,9 +43,7 @@ def _redirect_to_role_home(user):
     ):
         return redirect("store_top")
 
-    return HttpResponseForbidden(
-        "有効な権限が設定されていません。"
-    )
+    return HttpResponseForbidden("有効な権限が設定されていません。")
 
 
 def entry_view(request):
@@ -136,9 +135,7 @@ def account_register(request):
                     store_code=store_code,
                 )
 
-                target_role_label = (
-                    "店長" if can_choose_store else "店員"
-                )
+                target_role_label = "店長" if can_choose_store else "店員"
 
                 return render(
                     request,
@@ -175,7 +172,6 @@ def login_view(request):
 
     portal = request.session.get(LOGIN_PORTAL_SESSION_KEY)
 
-    # 入口を選択せずに直接ログイン画面を開いた場合は入口へ戻す
     if portal not in (STORE_PORTAL, HEADQUARTERS_PORTAL):
         return redirect("entry")
 
@@ -233,7 +229,6 @@ def login_view(request):
                 },
             )
 
-        # 店舗入口では、店長または店員だけを許可する
         if portal == STORE_PORTAL:
             allowed_roles = (
                 EmployeeProfile.Role.STORE_MANAGER,
@@ -257,7 +252,6 @@ def login_view(request):
             auth_login(request, user)
             return redirect("store_top")
 
-        # 本社入口では、本社管理者だけを許可する
         if portal == HEADQUARTERS_PORTAL:
             if profile.role != EmployeeProfile.Role.HEADQUARTERS_ADMIN:
                 return render(
@@ -355,7 +349,6 @@ def headquarters_master(request):
 
     profile = _get_employee_profile(request.user)
 
-    # 本社管理者以外はマスタ管理画面を表示できない
     if (
         profile is None
         or profile.role != EmployeeProfile.Role.HEADQUARTERS_ADMIN
@@ -367,6 +360,37 @@ def headquarters_master(request):
         )
 
     return render(request, "master.html")
+
+
+@require_GET
+def customer_order(request, store_id, table_no):
+    """QRコードから開くお客様用画面。ログインは不要。"""
+
+    request.session["store_id"] = store_id
+    request.session["table_no"] = table_no
+
+    context = {
+        "store_id": store_id,
+        "table_no": table_no,
+    }
+
+    return render(request, "customer.html", context)
+
+
+@require_GET
+def customer_menu(request, store_id, table_no):
+    """お客様用画面から開く商品一覧画面。ログインは不要。"""
+
+    # QRコードで指定された店舗とテーブル番号を引き継ぐ
+    request.session["store_id"] = store_id
+    request.session["table_no"] = table_no
+
+    context = {
+        "store_id": store_id,
+        "table_no": table_no,
+    }
+
+    return render(request, "product_list.html", context)
 
 
 @require_http_methods(["GET", "POST"])

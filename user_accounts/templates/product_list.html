@@ -1,0 +1,180 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品一覧</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Noto Sans JP", sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        /* ヘッダー */
+        .navbar {
+            background-color: #212529;
+            color: white;
+            padding: 18px 30px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* メイン */
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .description {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        /* 商品一覧 */
+        .product-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 25px;
+        }
+
+        .product-card {
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 180px;
+            background-color: #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+        }
+
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-info {
+            padding: 20px;
+        }
+
+        .product-name {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0 0 12px;
+        }
+
+        .product-price {
+            font-size: 22px;
+            font-weight: bold;
+            color: #dc3545;
+            margin-bottom: 18px;
+        }
+
+        .detail-button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            background-color: #212529;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .detail-button:hover {
+            background-color: #343a40;
+        }
+
+        @media (max-width: 500px) {
+            .navbar {
+                padding: 16px 20px;
+            }
+
+            .container {
+                margin-top: 25px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="navbar">
+        商品一覧
+    </header>
+
+    <main class="container">
+        <h1>商品一覧</h1>
+        <p class="description">
+            ご希望の商品をお選びください。
+        </p>
+
+        <div class="product-list">
+
+            <!-- 商品1 -->
+            <div class="product-card">
+                <div class="product-image">
+                    商品画像
+                </div>
+                <div class="product-info">
+                    <p class="product-name">商品A</p>
+                    <p class="product-price">￥500</p>
+                    <button class="detail-button" type="button">
+                        商品詳細
+                    </button>
+                </div>
+            </div>
+
+            <!-- 商品2 -->
+            <div class="product-card">
+                <div class="product-image">
+                    商品画像
+                </div>
+                <div class="product-info">
+                    <p class="product-name">商品B</p>
+                    <p class="product-price">￥800</p>
+                    <button class="detail-button" type="button">
+                        商品詳細
+                    </button>
+                </div>
+            </div>
+
+            <!-- 商品3 -->
+            <div class="product-card">
+                <div class="product-image">
+                    商品画像
+                </div>
+                <div class="product-info">
+                    <p class="product-name">商品C</p>
+                    <p class="product-price">￥1,000</p>
+                    <button class="detail-button" type="button">
+                        商品詳細
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</body>
+</html>

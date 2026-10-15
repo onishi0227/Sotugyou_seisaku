@@ -1,3 +1,4 @@
+
 from django.urls import path
 
 from . import views
@@ -53,5 +54,19 @@ urlpatterns = [
         "headquarters/master",
         views.headquarters_master,
         name="headquarters_master",
+    ),
+
+    # QRコードから開くお客様用画面
+    path(
+        "order/<int:store_id>/<int:table_no>",
+        views.customer_order,
+        name="customer_order",
+    ),
+
+    # お客様用の商品一覧画面
+    path(
+        "order/<int:store_id>/<int:table_no>/menu",
+        views.customer_menu,
+        name="customer_menu",
     ),
 ]
