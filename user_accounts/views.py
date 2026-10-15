@@ -4,6 +4,7 @@ from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_http_methods
 
 from .forms import AccountCreationForm
@@ -26,7 +27,7 @@ def _get_employee_profile(user):
 
 
 def _redirect_to_role_home(user):
-    """ログイン済みユーザーの権限に応じてトップ画面へ移動する。"""
+    """ログイン済みユーザーを権限に応じたトップ画面へ移動する。"""
     profile = _get_employee_profile(user)
 
     if profile is None:
@@ -46,8 +47,9 @@ def _redirect_to_role_home(user):
     return HttpResponseForbidden("有効な権限が設定されていません。")
 
 
+@never_cache
 def entry_view(request):
-    """S-00 トップ画面を表示する。"""
+    """S-00 入口画面を表示する。"""
     if request.user.is_authenticated:
         return _redirect_to_role_home(request.user)
 
@@ -63,18 +65,21 @@ def _select_login_portal(request, portal):
     return redirect("login")
 
 
+@never_cache
 @require_GET
 def select_store_portal(request):
     """店舗側ログインを選択する。"""
     return _select_login_portal(request, STORE_PORTAL)
 
 
+@never_cache
 @require_GET
 def select_headquarters_portal(request):
     """本社側ログインを選択する。"""
     return _select_login_portal(request, HEADQUARTERS_PORTAL)
 
 
+@never_cache
 @require_http_methods(["GET", "POST"])
 def account_register(request):
     """権限に応じて社員アカウントを作成する。"""
@@ -90,12 +95,10 @@ def account_register(request):
         )
 
     if profile.role == EmployeeProfile.Role.HEADQUARTERS_ADMIN:
-        # 本社管理者は店長を作成する
         target_role = EmployeeProfile.Role.STORE_MANAGER
         can_choose_store = True
 
     elif profile.role == EmployeeProfile.Role.STORE_MANAGER:
-        # 店長は自分の店舗の店員を作成する
         target_role = EmployeeProfile.Role.STAFF
         can_choose_store = False
 
@@ -122,7 +125,6 @@ def account_register(request):
                         "所属店舗コードを入力してください。",
                     )
             else:
-                # 店長が作成する店員は店長と同じ店舗に所属させる
                 store_code = profile.store_code
 
             if not form.errors:
@@ -166,9 +168,10 @@ def account_register(request):
     )
 
 
+@never_cache
 @require_http_methods(["GET", "POST"])
 def login_view(request):
-    """共通ログイン画面。入口とアカウント権限を照合する。"""
+    """共通ログイン画面。ログイン後は権限に応じて移動する。"""
 
     portal = request.session.get(LOGIN_PORTAL_SESSION_KEY)
 
@@ -181,6 +184,7 @@ def login_view(request):
         else "本社ログイン"
     )
 
+    # ログイン済みならログイン画面を表示しない
     if request.user.is_authenticated:
         return _redirect_to_role_home(request.user)
 
@@ -229,7 +233,6 @@ def login_view(request):
                 },
             )
 
-        # 店舗入口では、店長または店員だけを許可する
         if portal == STORE_PORTAL:
             allowed_roles = (
                 EmployeeProfile.Role.STORE_MANAGER,
@@ -253,7 +256,6 @@ def login_view(request):
             auth_login(request, user)
             return redirect("store_top")
 
-        # 本社入口では、本社管理者だけを許可する
         if portal == HEADQUARTERS_PORTAL:
             if profile.role != EmployeeProfile.Role.HEADQUARTERS_ADMIN:
                 return render(
@@ -282,14 +284,16 @@ def login_view(request):
     )
 
 
+@never_cache
 def login_success(request):
-    """旧ログイン成功URLから来た場合も権限に応じて振り分ける。"""
+    """ログイン成功URLから来た場合も権限に応じて振り分ける。"""
     if not request.user.is_authenticated:
         return redirect("entry")
 
     return _redirect_to_role_home(request.user)
 
 
+@never_cache
 @require_GET
 def store_top(request):
     """S-08 店舗トップ画面を表示する。"""
@@ -320,6 +324,7 @@ def store_top(request):
     return render(request, "store.html", context)
 
 
+@never_cache
 @require_GET
 def headquarters_top(request):
     """S-16 本社管理者トップ画面を表示する。"""
@@ -342,6 +347,7 @@ def headquarters_top(request):
     return render(request, "headquarters.html")
 
 
+@never_cache
 @require_GET
 def headquarters_master(request):
     """S-21 本社管理者用マスタ管理画面を表示する。"""
@@ -383,11 +389,9 @@ def customer_order(request, store_id, table_no):
 def customer_menu(request, store_id, table_no):
     """店舗・テーブルに対応したメニュー商品一覧を表示する。"""
 
-    # QRコードで指定された店舗とテーブル番号を引き継ぐ
     request.session["store_id"] = store_id
     request.session["table_no"] = table_no
 
-    # 指定された店舗の、販売中の商品だけを取得する
     products = MenuItem.objects.filter(
         store_id=store_id,
         is_available=True,
@@ -402,6 +406,7 @@ def customer_menu(request, store_id, table_no):
     return render(request, "product_list.html", context)
 
 
+@never_cache
 @require_http_methods(["GET", "POST"])
 def logout_view(request):
     """ログアウト後は入口選択画面へ戻す。"""
