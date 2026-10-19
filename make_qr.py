@@ -4,13 +4,11 @@ from pathlib import Path
 import qrcode
 
 
-# PCのWi-Fi側のIPv4アドレス
-PC_IP = "10.250.157.177"
+# AWSで公開しているサイトのURL
+BASE_URL = "https://100.61.82.142"
 
-# 店舗ID
+# 店舗IDとテーブル数
 STORE_ID = 1
-
-# テーブル数
 TABLE_COUNT = 10
 
 # QRコードの保存先
@@ -19,7 +17,7 @@ output_dir.mkdir(exist_ok=True)
 
 # テーブル1〜10のQRコードを作成
 for table_no in range(1, TABLE_COUNT + 1):
-    url = f"http://{PC_IP}:8000/order/{STORE_ID}/{table_no}"
+    url = f"{BASE_URL}/order/{STORE_ID}/{table_no}"
 
     qr = qrcode.QRCode(
         version=1,
@@ -43,8 +41,8 @@ for table_no in range(1, TABLE_COUNT + 1):
     image.save(output_path)
 
     print(f"テーブル{table_no}のQRコードを作成しました。")
+    print(f"URL: {url}")
     print(f"保存先: {output_path}")
-    print(f"アクセス先: {url}")
     print("-" * 40)
 
-print("全10卓のQRコード作成が完了しました。")
+print("全10卓の公開用QRコードを作成しました。")
