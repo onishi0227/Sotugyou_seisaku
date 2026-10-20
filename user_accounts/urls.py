@@ -56,6 +56,23 @@ urlpatterns = [
         name="headquarters_master",
     ),
 
+    # 本社マスタ登録画面
+    path(
+        "headquarters/master/ingredients",
+        views.ingredient_register,
+        name="ingredient_register",
+    ),
+    path(
+        "headquarters/master/menus",
+        views.menu_register,
+        name="menu_register",
+    ),
+    path(
+        "headquarters/master/recipes",
+        views.recipe_register,
+        name="recipe_register",
+    ),
+
     # QRコードから開くお客様用画面
     path(
         "order/<int:store_id>/<int:table_no>",

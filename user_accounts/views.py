@@ -7,7 +7,12 @@ from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_http_methods
 
-from .forms import AccountCreationForm
+from .forms import (
+    AccountCreationForm,
+    IngredientForm,
+    MenuItemForm,
+    RecipeForm,
+)
 from .models import EmployeeProfile, MenuItem
 
 
@@ -54,6 +59,26 @@ def _redirect_to_role_home(user):
         return redirect("store_top")
 
     return HttpResponseForbidden("有効な権限が設定されていません。")
+
+
+def _check_headquarters_access(request):
+    """本社管理者としてマスタ管理機能を利用できるか確認する。"""
+    if not request.user.is_authenticated:
+        return redirect("entry")
+
+    profile = _get_employee_profile(request.user)
+
+    if (
+        profile is None
+        or profile.role != EmployeeProfile.Role.HEADQUARTERS_ADMIN
+        or request.session.get(LOGIN_PORTAL_SESSION_KEY)
+        != HEADQUARTERS_PORTAL
+    ):
+        return HttpResponseForbidden(
+            "本社管理者だけがマスタ管理機能を利用できます。"
+        )
+
+    return None
 
 
 @never_cache
@@ -361,23 +386,108 @@ def headquarters_top(request):
 @require_GET
 def headquarters_master(request):
     """S-21 本社管理者用マスタ管理画面を表示する。"""
+    access_response = _check_headquarters_access(request)
 
-    if not request.user.is_authenticated:
-        return redirect("entry")
-
-    profile = _get_employee_profile(request.user)
-
-    if (
-        profile is None
-        or profile.role != EmployeeProfile.Role.HEADQUARTERS_ADMIN
-        or request.session.get(LOGIN_PORTAL_SESSION_KEY)
-        != HEADQUARTERS_PORTAL
-    ):
-        return HttpResponseForbidden(
-            "マスタ管理画面を表示する権限がありません。"
-        )
+    if access_response is not None:
+        return access_response
 
     return render(request, "master.html")
+
+
+@never_cache
+@require_http_methods(["GET", "POST"])
+def ingredient_register(request):
+    """本社管理者が食材を登録する。"""
+    access_response = _check_headquarters_access(request)
+
+    if access_response is not None:
+        return access_response
+
+    if request.method == "POST":
+        form = IngredientForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            return render(
+                request,
+                "ingredient_register.html",
+                {
+                    "form": IngredientForm(),
+                    "success_message": "食材を登録しました。",
+                },
+            )
+    else:
+        form = IngredientForm()
+
+    return render(
+        request,
+        "ingredient_register.html",
+        {"form": form},
+    )
+
+
+@never_cache
+@require_http_methods(["GET", "POST"])
+def menu_register(request):
+    """本社管理者がメニュー商品を登録する。"""
+    access_response = _check_headquarters_access(request)
+
+    if access_response is not None:
+        return access_response
+
+    if request.method == "POST":
+        form = MenuItemForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            return render(
+                request,
+                "menu_register.html",
+                {
+                    "form": MenuItemForm(),
+                    "success_message": "メニューを登録しました。",
+                },
+            )
+    else:
+        form = MenuItemForm()
+
+    return render(
+        request,
+        "menu_register.html",
+        {"form": form},
+    )
+
+
+@never_cache
+@require_http_methods(["GET", "POST"])
+def recipe_register(request):
+    """本社管理者がメニューと食材の使用量を登録する。"""
+    access_response = _check_headquarters_access(request)
+
+    if access_response is not None:
+        return access_response
+
+    if request.method == "POST":
+        form = RecipeForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            return render(
+                request,
+                "recipe_register.html",
+                {
+                    "form": RecipeForm(),
+                    "success_message": "レシピを登録しました。",
+                },
+            )
+    else:
+        form = RecipeForm()
+
+    return render(
+        request,
+        "recipe_register.html",
+        {"form": form},
+    )
 
 
 @require_GET

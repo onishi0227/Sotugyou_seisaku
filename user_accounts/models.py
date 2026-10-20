@@ -1,11 +1,10 @@
 
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.db import models
 
 
 class EmployeeProfile(models.Model):
-    """社員の氏名・権限・所属店舗を管理するモデル。"""
-
     class Role(models.TextChoices):
         HEADQUARTERS_ADMIN = "hq_admin", "本社管理者"
         STORE_MANAGER = "store_manager", "店長"
@@ -17,39 +16,32 @@ class EmployeeProfile(models.Model):
         related_name="employee_profile",
         verbose_name="ユーザー",
     )
-
     role = models.CharField(
         max_length=20,
         choices=Role.choices,
         default=Role.STAFF,
         verbose_name="権限",
     )
-
     full_name = models.CharField(
         max_length=150,
         blank=True,
         verbose_name="氏名",
     )
-
     store_code = models.CharField(
         max_length=30,
         blank=True,
         verbose_name="所属店舗コード",
     )
-
-    # 現在有効なログインセッション
     active_session_key = models.CharField(
         max_length=40,
         blank=True,
         default="",
         verbose_name="有効なログインセッション",
     )
-
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name="作成日時",
     )
-
     updated_at = models.DateTimeField(
         auto_now=True,
         verbose_name="更新日時",
@@ -60,42 +52,47 @@ class EmployeeProfile(models.Model):
 
 
 class MenuItem(models.Model):
-    """店舗ごとのメニュー商品を管理するモデル。"""
+    CATEGORY_CHOICES = [
+        ("主食", "主食"),
+        ("主菜", "主菜"),
+        ("副菜", "副菜"),
+        ("デザート", "デザート"),
+        ("ドリンク", "ドリンク"),
+    ]
 
     store_id = models.PositiveIntegerField(
         db_index=True,
         verbose_name="店舗ID",
     )
-
     name = models.CharField(
         max_length=100,
         verbose_name="商品名",
     )
-
     description = models.TextField(
         blank=True,
         verbose_name="商品説明",
     )
-
     price = models.PositiveIntegerField(
         verbose_name="価格（円）",
     )
-
+    category = models.CharField(
+        max_length=20,
+        choices=CATEGORY_CHOICES,
+        default="主食",
+        verbose_name="カテゴリ",
+    )
     is_available = models.BooleanField(
         default=True,
         verbose_name="販売中",
     )
-
     sort_order = models.PositiveIntegerField(
         default=0,
         verbose_name="表示順",
     )
-
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name="登録日時",
     )
-
     updated_at = models.DateTimeField(
         auto_now=True,
         verbose_name="更新日時",
@@ -108,3 +105,81 @@ class MenuItem(models.Model):
 
     def __str__(self):
         return f"{self.name}（店舗ID：{self.store_id}）"
+
+
+class Ingredient(models.Model):
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name="食材名",
+    )
+    unit = models.CharField(
+        max_length=30,
+        verbose_name="単位",
+    )
+    delivery_days = models.PositiveIntegerField(
+        verbose_name="納品日数",
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="登録日時",
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="更新日時",
+    )
+
+    class Meta:
+        verbose_name = "食材"
+        verbose_name_plural = "食材"
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name}（{self.unit}）"
+
+
+class Recipe(models.Model):
+    menu_item = models.ForeignKey(
+        MenuItem,
+        on_delete=models.CASCADE,
+        related_name="recipes",
+        verbose_name="メニュー",
+    )
+    ingredient = models.ForeignKey(
+        Ingredient,
+        on_delete=models.PROTECT,
+        related_name="recipes",
+        verbose_name="食材",
+    )
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(0.001)],
+        verbose_name="使用量",
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="登録日時",
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="更新日時",
+    )
+
+    class Meta:
+        verbose_name = "レシピ"
+        verbose_name_plural = "レシピ"
+        ordering = ["menu_item", "ingredient"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["menu_item", "ingredient"],
+                name="unique_recipe_menu_ingredient",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.menu_item.name}："
+            f"{self.ingredient.name} "
+            f"{self.quantity}{self.ingredient.unit}"
+        )

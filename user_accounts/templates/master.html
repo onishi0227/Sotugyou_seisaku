@@ -147,7 +147,7 @@
     <!-- ナビゲーション -->
     <nav class="navbar">
         <div class="navbar-title">
-            注文連携型 在庫管理・発注支援システム
+            注文連動型 在庫管理・発注支援システム
         </div>
 
         <a href="{% url 'logout' %}" class="user-icon"
@@ -174,21 +174,21 @@
             </a>
 
             <!-- 食材の登録：画面接続前 -->
-            <a href="#" class="menu-card">
+            <a href="{% url 'ingredient_register' %}" class="menu-card">
                 <i class="fa-solid fa-carrot"></i>
                 <h3>食材の登録</h3>
                 <p>食材の情報を登録します</p>
             </a>
 
             <!-- メニューの登録：画面接続前 -->
-            <a href="#" class="menu-card">
+            <a href="{% url 'menu_register' %}" class="menu-card">
                 <i class="fa-solid fa-utensils"></i>
                 <h3>メニューの登録</h3>
                 <p>メニューの情報を登録します</p>
             </a>
 
             <!-- レシピの登録：画面接続前 -->
-            <a href="#" class="menu-card">
+            <a href="{% url 'recipe_register' %}" class="menu-card">
                 <i class="fa-solid fa-book-open"></i>
                 <h3>レシピの登録</h3>
                 <p>メニューに使用するレシピを登録します</p>
