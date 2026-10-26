@@ -1,0 +1,273 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>在庫一覧</title>
+
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        .custom-navbar {
+            background-color: #212529;
+            padding: 18px 0;
+            z-index: 1030;
+            position: relative;
+        }
+
+        .custom-navbar .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 28px;
+        }
+
+        /* システム名 */
+        .system-name {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            padding-right: 45px;
+        }
+
+        /* ユーザーアイコン */
+        .user-icon {
+            color: white !important;
+            font-size: 22px;
+            text-decoration: none !important;
+        }
+
+        .user-icon:hover {
+            color: #cccccc !important;
+        }
+
+        /* メイン部分 */
+        .stock-main {
+            padding-top: 120px;
+            padding-bottom: 80px;
+        }
+
+        /* タイトル */
+        .stock-title {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .stock-title h1 {
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .stock-title p {
+            color: #777;
+        }
+
+        /* 在庫一覧テーブル */
+        .stock-table-container {
+            width: 100%;
+            overflow-x: auto;
+            background-color: white;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .stock-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+        }
+
+        .stock-table th {
+            background-color: #212529;
+            color: white;
+            padding: 15px;
+            white-space: nowrap;
+        }
+
+        .stock-table td {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .stock-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .stock-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* 棚卸済み */
+        .stock-normal {
+            color: #198754;
+            font-weight: bold;
+        }
+
+        /* 未棚卸 */
+        .not-inventoried {
+            color: #fd7e14;
+            font-weight: bold;
+        }
+
+        /* 店舗トップに戻るボタン */
+        .back-button {
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .back-button a {
+            display: inline-block;
+            padding: 10px 24px;
+            background-color: #212529;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+
+        .back-button a:hover {
+            background-color: #343a40;
+            color: white;
+        }
+
+        /* スマートフォン */
+        @media (max-width: 576px) {
+            .custom-navbar {
+                padding: 18px 0;
+            }
+
+            .system-name {
+                font-size: 15px;
+                padding-right: 15px;
+            }
+
+            .stock-main {
+                padding-top: 95px;
+            }
+
+            .stock-title h1 {
+                font-size: 26px;
+            }
+
+            .stock-table th,
+            .stock-table td {
+                padding: 12px 10px;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ナビバー -->
+    <nav class="custom-navbar">
+        <div class="container">
+            <span class="system-name">
+                注文連携型 在庫管理・発注支援システム
+            </span>
+
+            <a href="{% url 'logout' %}"
+               class="user-icon"
+               title="ログアウト"
+               aria-label="ログアウト">
+                <i class="fa-solid fa-user"></i>
+            </a>
+        </div>
+    </nav>
+
+    <!-- メイン -->
+    <main class="stock-main">
+        <div class="container">
+
+            <!-- タイトル -->
+            <div class="stock-title">
+                <h1>在庫一覧</h1>
+
+                <p>
+                    自店舗の食材の実在庫数と最終棚卸日を確認できます
+                </p>
+
+                <p>
+                    店舗コード：{{ store_code }}
+                </p>
+            </div>
+
+            <!-- 在庫一覧 -->
+            <div class="stock-table-container">
+                <table class="stock-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">食品名</th>
+                            <th scope="col">実際の在庫数</th>
+                            <th scope="col">最終棚卸日</th>
+                            <th scope="col">在庫状態</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for row in inventory_rows %}
+                        <tr>
+                            <td>
+                                {{ row.ingredient.name }}
+                            </td>
+
+                            {% if row.stocktake %}
+                                <td>
+                                    {{ row.stocktake.actual_quantity }}
+                                    {{ row.ingredient.unit }}
+                                </td>
+
+                                <td>
+                                    {{ row.stocktake.stocktake_date|date:"Y/m/d" }}
+                                </td>
+
+                                <td class="stock-normal">
+                                    棚卸済
+                                </td>
+                            {% else %}
+                                <td class="not-inventoried">
+                                    未確認
+                                </td>
+
+                                <td>
+                                    —
+                                </td>
+
+                                <td class="not-inventoried">
+                                    未棚卸
+                                </td>
+                            {% endif %}
+                        </tr>
+
+                        {% empty %}
+                        <tr>
+                            <td colspan="4">
+                                登録されている食材はありません。
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 店舗管理者用画面に戻る -->
+            <div class="back-button">
+                <a href="{% url 'store_top' %}">
+                    店舗管理者用画面に戻る
+                </a>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="{% static 'js/scripts.js' %}"></script>
+
+</body>
+</html>

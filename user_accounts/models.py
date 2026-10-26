@@ -1,4 +1,3 @@
-
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -181,5 +180,113 @@ class Recipe(models.Model):
         return (
             f"{self.menu_item.name}："
             f"{self.ingredient.name} "
+            f"{self.quantity}{self.ingredient.unit}"
+        )
+
+
+class Stocktake(models.Model):
+    """店舗ごとの棚卸結果を保存する。"""
+
+    store_code = models.CharField(
+        max_length=30,
+        db_index=True,
+        verbose_name="店舗コード",
+    )
+    ingredient = models.ForeignKey(
+        Ingredient,
+        on_delete=models.PROTECT,
+        related_name="stocktakes",
+        verbose_name="食材",
+    )
+    stocktake_date = models.DateField(
+        verbose_name="棚卸日",
+    )
+    actual_quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(0)],
+        verbose_name="実在庫",
+    )
+    recorded_by = models.ForeignKey(
+        EmployeeProfile,
+        on_delete=models.PROTECT,
+        related_name="stocktake_records",
+        verbose_name="棚卸担当者",
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="登録日時",
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="更新日時",
+    )
+
+    class Meta:
+        verbose_name = "棚卸結果"
+        verbose_name_plural = "棚卸結果"
+        ordering = ["-stocktake_date", "ingredient__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "store_code",
+                    "ingredient",
+                    "stocktake_date",
+                ],
+                name="uniq_stocktake_store_ing_date",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.store_code}：{self.ingredient.name} "
+            f"{self.actual_quantity}{self.ingredient.unit} "
+            f"（{self.stocktake_date}）"
+        )
+
+
+class TheoreticalStock(models.Model):
+    """店舗・食材ごとの理論在庫を保存する。"""
+
+    store_code = models.CharField(
+        max_length=30,
+        db_index=True,
+        verbose_name="店舗コード",
+    )
+    ingredient = models.ForeignKey(
+        Ingredient,
+        on_delete=models.PROTECT,
+        related_name="theoretical_stocks",
+        verbose_name="食材",
+    )
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(0)],
+        verbose_name="理論在庫",
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="作成日時",
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="更新日時",
+    )
+
+    class Meta:
+        verbose_name = "理論在庫"
+        verbose_name_plural = "理論在庫"
+        ordering = ["store_code", "ingredient__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["store_code", "ingredient"],
+                name="uniq_store_ingredient_theory",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.store_code}：{self.ingredient.name} "
             f"{self.quantity}{self.ingredient.unit}"
         )

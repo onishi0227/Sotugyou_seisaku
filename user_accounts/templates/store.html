@@ -203,15 +203,15 @@
                     </div>
                 </a>
 
-                <!-- 在庫一覧 -->
-                <a href="#" class="management-card">
-                    <div class="management-title">
-                        <div class="management-icon">
-                            <i class="fa-solid fa-boxes-stacked"></i>
+                    <!-- 在庫一覧 -->
+                    <a href="{% url 'inventory_list' %}" class="management-card">
+                        <div class="management-title">
+                            <div class="management-icon">
+                                <i class="fa-solid fa-boxes-stacked"></i>
+                            </div>
+                            <h3>在庫一覧</h3>
                         </div>
-                        <h3>在庫一覧</h3>
-                    </div>
-                </a>
+                    </a>
 
             </div>
         </div>
@@ -227,7 +227,8 @@
             <div class="manager-container">
 
                 <!-- 棚卸登録 -->
-                <a href="#" class="management-card">
+                <a href="{% url 'stocktake_register' %}"
+                class="management-card">
                     <div class="management-title">
                         <div class="management-icon">
                             <i class="fa-solid fa-clipboard-check"></i>

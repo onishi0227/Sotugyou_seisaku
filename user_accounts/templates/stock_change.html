@@ -1,0 +1,545 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>棚卸入力</title>
+
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        .custom-navbar {
+            background-color: #212529;
+            padding: 18px 0;
+            position: relative;
+        }
+
+        .custom-navbar .container {
+            display: flex;
+            align-items: center;
+            min-height: 28px;
+        }
+
+        .system-name {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            padding-right: 45px;
+        }
+
+        .user-icon {
+            position: absolute;
+            top: 50%;
+            right: 30px;
+            transform: translateY(-50%);
+            color: white !important;
+            font-size: 22px;
+            text-decoration: none !important;
+        }
+
+        .user-icon:hover {
+            color: #cccccc !important;
+        }
+
+        .change-main {
+            padding-top: 120px;
+            padding-bottom: 80px;
+        }
+
+        .change-title {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .change-title h1 {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .change-title p {
+            color: #777;
+        }
+
+        .inventory-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 900px;
+            margin: 0 0 25px 0;
+        }
+
+        .info-item {
+            min-width: 0;
+            text-align: left;
+        }
+
+        .info-item label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .info-input,
+        .staff-input {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background-color: #f8f9fa;
+            font-size: 16px;
+            text-align: left;
+        }
+
+        .stock-table-container {
+            width: 100%;
+            overflow-x: auto;
+            background-color: white;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .stock-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+        }
+
+        .stock-table th {
+            background-color: #212529;
+            color: white;
+            padding: 15px;
+            white-space: nowrap;
+        }
+
+        .stock-table td {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .stock-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .stock-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .stock-input {
+            width: 120px;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .stock-input:focus,
+        .info-input:focus,
+        .staff-input:focus {
+            outline: none;
+            border-color: #212529;
+        }
+
+        .delete-button {
+            padding: 8px 14px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .delete-button:hover {
+            background-color: #bb2d3b;
+        }
+
+        .button-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            margin-top: 30px;
+        }
+
+        .action-button {
+            display: inline-block;
+            padding: 12px 28px;
+            background-color: #212529;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 16px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .action-button:hover {
+            background-color: #343a40;
+            color: white;
+        }
+
+        .register-button {
+            background-color: #6f42c1;
+        }
+
+        .register-button:hover {
+            background-color: #59359a;
+        }
+
+        .empty-message {
+            padding: 25px;
+            color: #777;
+        }
+
+        .error-message {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border: 1px solid #f1aeb5;
+            border-radius: 6px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+        }
+
+        .blind-note {
+            margin-bottom: 20px;
+            padding: 14px 18px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #6f42c1;
+        }
+
+        @media (max-width: 576px) {
+            .system-name {
+                font-size: 15px;
+                padding-right: 35px;
+            }
+
+            .user-icon {
+                right: 15px;
+                font-size: 20px;
+            }
+
+            .change-main {
+                padding-top: 95px;
+            }
+
+            .change-title h1 {
+                font-size: 26px;
+            }
+
+            .inventory-info {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .stock-table th,
+            .stock-table td {
+                padding: 12px 10px;
+                white-space: nowrap;
+            }
+
+            .stock-input {
+                width: 100px;
+            }
+
+            .button-area {
+                gap: 15px;
+                flex-wrap: wrap;
+            }
+
+            .action-button {
+                padding: 11px 16px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ナビバー -->
+    <nav class="custom-navbar">
+        <div class="container">
+            <span class="system-name">
+                注文連携型 在庫管理・発注支援システム
+            </span>
+
+            <a href="{% url 'logout' %}"
+               class="user-icon"
+               title="ログアウト"
+               aria-label="ログアウト">
+                <i class="fa-solid fa-user"></i>
+            </a>
+        </div>
+    </nav>
+
+    <!-- メイン -->
+    <main class="change-main">
+        <div class="container">
+
+            <!-- タイトル -->
+            <div class="change-title">
+                <h1>棚卸登録</h1>
+                <p>食材ごとの実在庫数を入力してください</p>
+            </div>
+
+            <!-- 棚卸日・担当者 -->
+            <div class="inventory-info">
+                <div class="info-item">
+                    <label for="inventory-date">棚卸日</label>
+                    <input
+                        type="date"
+                        id="inventory-date"
+                        class="info-input"
+                        value="{{ today|date:'Y-m-d' }}"
+                        readonly
+                    >
+                </div>
+
+                <div class="info-item">
+                    <label for="staff-name">担当者</label>
+                    <input
+                        type="text"
+                        id="staff-name"
+                        class="staff-input"
+                        value="{{ manager_name }}"
+                        readonly
+                    >
+                </div>
+            </div>
+
+            <p>店舗コード：{{ store_code }}</p>
+
+            <div class="blind-note">
+                <strong>注意：</strong>
+                理論在庫は表示されません。
+                食材を実際に数えて入力してください。
+                削除ボタンを押すと、今回の棚卸対象からその食材を外します。
+            </div>
+
+            {% if errors %}
+            <div class="error-message" role="alert">
+                <strong>入力内容を確認してください。</strong>
+                <ul>
+                    {% for error in errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- 棚卸入力フォーム -->
+            <form
+                id="inventory-form"
+                method="post"
+                action="{% url 'stocktake_register' %}"
+            >
+                {% csrf_token %}
+
+                <div class="stock-table-container">
+                    <table class="stock-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">食材名</th>
+                                <th scope="col">単位</th>
+                                <th scope="col">実在庫数</th>
+                                <th scope="col">操作</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="stock-table-body">
+                            {% for ingredient in ingredients %}
+                            <tr class="stock-row">
+                                <td>
+                                    {{ ingredient.name }}
+
+                                    <input
+                                        type="hidden"
+                                        name="ingredient_ids"
+                                        value="{{ ingredient.pk }}"
+                                    >
+                                </td>
+
+                                <td>{{ ingredient.unit }}</td>
+
+                                <td>
+                                    <input
+                                        type="number"
+                                        class="stock-input"
+                                        name="quantity_{{ ingredient.pk }}"
+                                        value="{{ ingredient.input_quantity }}"
+                                        min="0"
+                                        max="999999999.999"
+                                        step="0.001"
+                                        placeholder="数量を入力"
+                                        aria-label="{{ ingredient.name }}の実在庫数"
+                                        required
+                                    >
+                                </td>
+
+                                <td>
+                                    <button
+                                        type="button"
+                                        class="delete-button"
+                                        data-ingredient-name="{{ ingredient.name }}"
+                                    >
+                                        削除
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="empty-message">
+                                    登録されている食材がありません。
+                                    本社管理者が食材を登録してください。
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 戻る・登録ボタン -->
+                <div class="button-area">
+                    <a
+                        href="{% url 'store_top' %}"
+                        class="action-button"
+                    >
+                        店舗管理者用画面に戻る
+                    </a>
+
+                    {% if has_ingredients %}
+                    <button
+                        type="submit"
+                        id="register-button"
+                        class="action-button register-button"
+                    >
+                        {% if is_editing %}
+                        修正して登録
+                        {% else %}
+                        登録
+                        {% endif %}
+                    </button>
+                    {% endif %}
+                </div>
+            </form>
+
+        </div>
+    </main>
+
+    <script src="{% static 'js/scripts.js' %}"></script>
+
+    <script>
+        const form = document.getElementById("inventory-form");
+        const tableBody = document.getElementById("stock-table-body");
+        const registerButton = document.getElementById("register-button");
+
+        // 食材行の削除
+        tableBody.addEventListener("click", function(event) {
+            const button = event.target.closest(".delete-button");
+
+            if (!button) {
+                return;
+            }
+
+            const row = button.closest(".stock-row");
+
+            if (!row) {
+                return;
+            }
+
+            const rows = tableBody.querySelectorAll(".stock-row");
+
+            // 最後の1行は残す
+            if (rows.length <= 1) {
+                alert("少なくとも1つの食材を残してください。");
+                return;
+            }
+
+            const ingredientName = button.dataset.ingredientName;
+
+            if (
+                !confirm(
+                    ingredientName
+                    + "を今回の棚卸対象から外しますか？"
+                    + "\n食材マスタや過去の棚卸履歴は削除されません。"
+                )
+            ) {
+                return;
+            }
+
+            row.remove();
+            updateRegisterButton();
+        });
+
+        // 食材が残っているか確認
+        function updateRegisterButton() {
+            const rows = tableBody.querySelectorAll(".stock-row");
+
+            if (registerButton) {
+                registerButton.disabled = rows.length === 0;
+            }
+        }
+
+        // 登録前の入力チェック
+        form.addEventListener("submit", function(event) {
+            const rows = tableBody.querySelectorAll(".stock-row");
+
+            if (rows.length === 0) {
+                event.preventDefault();
+                alert("少なくとも1つの食材を残してください。");
+                return;
+            }
+
+            for (const row of rows) {
+                const input = row.querySelector(".stock-input");
+
+                if (!input || input.value.trim() === "") {
+                    event.preventDefault();
+                    alert("残っているすべての食材の数量を入力してください。");
+
+                    if (input) {
+                        input.focus();
+                    }
+
+                    return;
+                }
+
+                const value = Number(input.value);
+
+                if (
+                    !Number.isFinite(value)
+                    || value < 0
+                    || value > 999999999.999
+                ) {
+                    event.preventDefault();
+                    alert("実在庫数は0以上の数値を入力してください。");
+                    input.focus();
+                    return;
+                }
+            }
+
+            if (!confirm("棚卸情報を登録しますか？")) {
+                event.preventDefault();
+            }
+        });
+
+        updateRegisterButton();
+    </script>
+
+</body>
+</html>

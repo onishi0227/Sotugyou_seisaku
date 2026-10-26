@@ -1,4 +1,3 @@
-
 from django.urls import path
 
 from . import views
@@ -40,6 +39,27 @@ urlpatterns = [
         "store/top",
         views.store_top,
         name="store_top",
+    ),
+
+    # S-11 在庫一覧画面
+    path(
+        "store/inventory",
+        views.inventory_list,
+        name="inventory_list",
+    ),
+
+    # S-12 棚卸登録画面
+    path(
+        "store/stocktake",
+        views.stocktake_register,
+        name="stocktake_register",
+    ),
+
+    # S-12 棚卸登録完了画面
+    path(
+        "store/stocktake/complete",
+        views.stocktake_complete,
+        name="stocktake_complete",
     ),
 
     # S-16 本社管理者トップ画面
