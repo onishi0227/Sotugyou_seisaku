@@ -1,0 +1,11 @@
+ user_accounts/migrations/0005_stocktake.py         |  34 [32m++[m
+ user_accounts/migrations/0006_theoreticalstock.py  |  32 [32m++[m
+ user_accounts/models.py                            | 109 [32m++++[m[31m-[m
+ user_accounts/templates/recipe_register.html       | 239 [32m++++++[m[31m---[m
+ user_accounts/templates/stock_change.html          | 545 [32m+++++++++++++++++++++[m
+ user_accounts/templates/stock_change_complete.html | 145 [32m++++++[m
+ user_accounts/templates/stock_list.html            | 273 [32m+++++++++++[m
+ user_accounts/templates/store.html                 |  19 [32m+[m[31m-[m
+ user_accounts/urls.py                              |  24 [32m+[m[31m-[m
+ user_accounts/views.py                             | 535 [32m++++++++++++++++++[m[31m--[m
+ 10 files changed, 1843 insertions(+), 112 deletions(-)
