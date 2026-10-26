@@ -1,19 +1,18 @@
 
+from decimal import Decimal, InvalidOperation
+
 from django.contrib.auth import authenticate
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
+from django.db import transaction
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_http_methods
 
-from .forms import (
-    AccountCreationForm,
-    IngredientForm,
-    MenuItemForm,
-    RecipeForm,
-)
-from .models import EmployeeProfile, MenuItem
+from .forms import AccountCreationForm, IngredientForm, MenuItemForm
+from .models import EmployeeProfile, Ingredient, MenuItem, Recipe
 
 
 # ログイン前に選択した入口をセッションに保存する
@@ -71,14 +70,49 @@ def _check_headquarters_access(request):
     if (
         profile is None
         or profile.role != EmployeeProfile.Role.HEADQUARTERS_ADMIN
-        or request.session.get(LOGIN_PORTAL_SESSION_KEY)
-        != HEADQUARTERS_PORTAL
+        or request.session.get(LOGIN_PORTAL_SESSION_KEY) != HEADQUARTERS_PORTAL
     ):
         return HttpResponseForbidden(
             "本社管理者だけがマスタ管理機能を利用できます。"
         )
 
     return None
+
+
+def _build_recipe_groups(menus):
+    """登録済みレシピをメニュー単位にまとめ、画面表示用データを作る。"""
+    groups = []
+
+    recipes = (
+        Recipe.objects.filter(menu_item__in=menus)
+        .select_related("menu_item", "ingredient")
+        .order_by("menu_item_id", "ingredient__name")
+    )
+
+    grouped = {}
+    for recipe in recipes:
+        grouped.setdefault(recipe.menu_item_id, []).append(
+            {
+                "ingredient_id": recipe.ingredient_id,
+                "name": recipe.ingredient.name,
+                "amount": str(recipe.quantity),
+                "unit": recipe.ingredient.unit,
+            }
+        )
+
+    for menu in menus:
+        rows = grouped.get(menu.pk, [])
+        if rows:
+            groups.append(
+                {
+                    "menu_id": menu.pk,
+                    "menu_name": menu.name,
+                    "store_id": menu.store_id,
+                    "ingredients": rows,
+                }
+            )
+
+    return groups
 
 
 @never_cache
@@ -117,7 +151,6 @@ def select_headquarters_portal(request):
 @require_http_methods(["GET", "POST"])
 def account_register(request):
     """権限に応じて社員アカウントを作成する。"""
-
     if not request.user.is_authenticated:
         return redirect("login")
 
@@ -131,7 +164,6 @@ def account_register(request):
     if profile.role == EmployeeProfile.Role.HEADQUARTERS_ADMIN:
         target_role = EmployeeProfile.Role.STORE_MANAGER
         can_choose_store = True
-
     elif profile.role == EmployeeProfile.Role.STORE_MANAGER:
         target_role = EmployeeProfile.Role.STAFF
         can_choose_store = False
@@ -140,7 +172,6 @@ def account_register(request):
             return HttpResponseForbidden(
                 "所属店舗が設定されていないため、店員を作成できません。"
             )
-
     else:
         return HttpResponseForbidden(
             "アカウントを作成する権限がありません。"
@@ -152,7 +183,6 @@ def account_register(request):
         if form.is_valid():
             if can_choose_store:
                 store_code = form.cleaned_data["store_code"].strip()
-
                 if not store_code:
                     form.add_error(
                         "store_code",
@@ -163,7 +193,6 @@ def account_register(request):
 
             if not form.errors:
                 new_user = form.save()
-
                 EmployeeProfile.objects.create(
                     user=new_user,
                     role=target_role,
@@ -172,7 +201,6 @@ def account_register(request):
                 )
 
                 target_role_label = "店長" if can_choose_store else "店員"
-
                 return render(
                     request,
                     "account_register.html",
@@ -185,7 +213,6 @@ def account_register(request):
                         ),
                     },
                 )
-
     else:
         form = AccountCreationForm()
 
@@ -195,9 +222,7 @@ def account_register(request):
         {
             "form": form,
             "can_choose_store": can_choose_store,
-            "target_role_label": (
-                "店長" if can_choose_store else "店員"
-            ),
+            "target_role_label": "店長" if can_choose_store else "店員",
         },
     )
 
@@ -206,17 +231,12 @@ def account_register(request):
 @require_http_methods(["GET", "POST"])
 def login_view(request):
     """共通ログイン画面。入口とアカウント権限を照合する。"""
-
     portal = request.session.get(LOGIN_PORTAL_SESSION_KEY)
 
     if portal not in (STORE_PORTAL, HEADQUARTERS_PORTAL):
         return redirect("entry")
 
-    portal_label = (
-        "店舗ログイン"
-        if portal == STORE_PORTAL
-        else "本社ログイン"
-    )
+    portal_label = "店舗ログイン" if portal == STORE_PORTAL else "本社ログイン"
 
     if request.user.is_authenticated:
         return _redirect_to_role_home(request.user)
@@ -228,7 +248,6 @@ def login_view(request):
             or request.POST.get("store_code")
             or ""
         ).strip()
-
         password = request.POST.get("password", "")
 
         user = authenticate(
@@ -251,7 +270,6 @@ def login_view(request):
             )
 
         profile = _get_employee_profile(user)
-
         if profile is None:
             return render(
                 request,
@@ -271,7 +289,6 @@ def login_view(request):
                 EmployeeProfile.Role.STORE_MANAGER,
                 EmployeeProfile.Role.STAFF,
             )
-
             if profile.role not in allowed_roles:
                 return render(
                     request,
@@ -312,10 +329,7 @@ def login_view(request):
     return render(
         request,
         "login.html",
-        {
-            "portal": portal,
-            "portal_label": portal_label,
-        },
+        {"portal": portal, "portal_label": portal_label},
     )
 
 
@@ -324,7 +338,6 @@ def login_success(request):
     """旧ログイン成功URLから来た場合も権限に応じて振り分ける。"""
     if not request.user.is_authenticated:
         return redirect("entry")
-
     return _redirect_to_role_home(request.user)
 
 
@@ -332,12 +345,10 @@ def login_success(request):
 @require_GET
 def store_top(request):
     """S-08 店舗トップ画面を表示する。"""
-
     if not request.user.is_authenticated:
         return redirect("entry")
 
     profile = _get_employee_profile(request.user)
-
     if (
         profile is None
         or profile.role not in (
@@ -351,11 +362,8 @@ def store_top(request):
         )
 
     context = {
-        "is_store_manager": (
-            profile.role == EmployeeProfile.Role.STORE_MANAGER
-        ),
+        "is_store_manager": profile.role == EmployeeProfile.Role.STORE_MANAGER,
     }
-
     return render(request, "store.html", context)
 
 
@@ -363,17 +371,14 @@ def store_top(request):
 @require_GET
 def headquarters_top(request):
     """S-16 本社管理者トップ画面を表示する。"""
-
     if not request.user.is_authenticated:
         return redirect("entry")
 
     profile = _get_employee_profile(request.user)
-
     if (
         profile is None
         or profile.role != EmployeeProfile.Role.HEADQUARTERS_ADMIN
-        or request.session.get(LOGIN_PORTAL_SESSION_KEY)
-        != HEADQUARTERS_PORTAL
+        or request.session.get(LOGIN_PORTAL_SESSION_KEY) != HEADQUARTERS_PORTAL
     ):
         return HttpResponseForbidden(
             "本社トップ画面を表示する権限がありません。"
@@ -387,10 +392,8 @@ def headquarters_top(request):
 def headquarters_master(request):
     """S-21 本社管理者用マスタ管理画面を表示する。"""
     access_response = _check_headquarters_access(request)
-
     if access_response is not None:
         return access_response
-
     return render(request, "master.html")
 
 
@@ -399,13 +402,11 @@ def headquarters_master(request):
 def ingredient_register(request):
     """本社管理者が食材を登録する。"""
     access_response = _check_headquarters_access(request)
-
     if access_response is not None:
         return access_response
 
     if request.method == "POST":
         form = IngredientForm(request.POST)
-
         if form.is_valid():
             form.save()
             return render(
@@ -419,11 +420,7 @@ def ingredient_register(request):
     else:
         form = IngredientForm()
 
-    return render(
-        request,
-        "ingredient_register.html",
-        {"form": form},
-    )
+    return render(request, "ingredient_register.html", {"form": form})
 
 
 @never_cache
@@ -431,13 +428,11 @@ def ingredient_register(request):
 def menu_register(request):
     """本社管理者がメニュー商品を登録する。"""
     access_response = _check_headquarters_access(request)
-
     if access_response is not None:
         return access_response
 
     if request.method == "POST":
         form = MenuItemForm(request.POST)
-
         if form.is_valid():
             form.save()
             return render(
@@ -451,94 +446,221 @@ def menu_register(request):
     else:
         form = MenuItemForm()
 
-    return render(
-        request,
-        "menu_register.html",
-        {"form": form},
-    )
+    return render(request, "menu_register.html", {"form": form})
 
 
 @never_cache
 @require_http_methods(["GET", "POST"])
 def recipe_register(request):
-    """本社管理者がメニューと食材の使用量を登録する。"""
+    """本社管理者がレシピを登録・変更し、登録済みの内容を表示する。"""
     access_response = _check_headquarters_access(request)
-
     if access_response is not None:
         return access_response
 
+    menus = list(MenuItem.objects.order_by("store_id", "sort_order", "name"))
+    ingredients = list(Ingredient.objects.order_by("name"))
+    selected_menu_id = ""
+    initial_rows = []
+    errors = []
+    success_message = None
+    is_editing = False
+
     if request.method == "POST":
-        form = RecipeForm(request.POST)
+        raw_menu_id = request.POST.get("menu_item_id", "").strip()
+        selected_menu_id = raw_menu_id
+        menu_item = None
 
-        if form.is_valid():
-            form.save()
-            return render(
-                request,
-                "recipe_register.html",
+        if raw_menu_id:
+            try:
+                menu_id_number = int(raw_menu_id)
+                menu_item = next(
+                    (menu for menu in menus if menu.pk == menu_id_number),
+                    None,
+                )
+            except (TypeError, ValueError):
+                menu_item = None
+
+        if menu_item is None:
+            errors.append("メニューを選択してください。")
+        else:
+            selected_menu_id = menu_item.pk
+            is_editing = Recipe.objects.filter(menu_item=menu_item).exists()
+
+        ingredient_ids = request.POST.getlist("ingredient_id[]")
+        quantities = request.POST.getlist("quantity[]")
+        ingredient_by_id = {ingredient.pk: ingredient for ingredient in ingredients}
+        cleaned_rows = []
+        seen_ingredient_ids = set()
+
+        if not ingredient_ids or len(ingredient_ids) != len(quantities):
+            errors.append("食材と使用量を入力してください。")
+
+        for raw_ingredient_id, raw_quantity in zip(ingredient_ids, quantities):
+            raw_ingredient_id = raw_ingredient_id.strip()
+            raw_quantity = raw_quantity.strip()
+            ingredient = None
+            quantity = None
+
+            if not raw_ingredient_id or not raw_quantity:
+                errors.append("食材名と使用量を入力してください。")
+            else:
+                try:
+                    ingredient_id = int(raw_ingredient_id)
+                    ingredient = ingredient_by_id.get(ingredient_id)
+                except (TypeError, ValueError):
+                    ingredient = None
+
+                if ingredient is None:
+                    errors.append("登録済みの食材を選択してください。")
+                elif ingredient.pk in seen_ingredient_ids:
+                    errors.append("同じ食材は1つのレシピに重複して登録できません。")
+                else:
+                    seen_ingredient_ids.add(ingredient.pk)
+
+                try:
+                    quantity = Decimal(raw_quantity)
+                    if (
+                        not quantity.is_finite()
+                        or quantity < Decimal("0.001")
+                        or quantity.as_tuple().exponent < -3
+                        or quantity >= Decimal("1000000000")
+                    ):
+                        raise InvalidOperation
+                except (InvalidOperation, ValueError):
+                    quantity = None
+                    errors.append(
+                        "使用量は0.001以上、小数第3位までの数値を入力してください。"
+                    )
+
+            initial_rows.append(
                 {
-                    "form": RecipeForm(),
-                    "success_message": "レシピを登録しました。",
-                },
+                    "ingredient_id": raw_ingredient_id,
+                    "amount": raw_quantity,
+                    "unit": ingredient.unit if ingredient else "",
+                }
             )
-    else:
-        form = RecipeForm()
 
-    return render(
-        request,
-        "recipe_register.html",
-        {"form": form},
-    )
+            if ingredient is not None and quantity is not None:
+                cleaned_rows.append((ingredient, quantity))
+
+        if not initial_rows:
+            errors.append("食材を1つ以上追加してください。")
+
+        if menu_item is not None and not errors:
+            was_existing = Recipe.objects.filter(menu_item=menu_item).exists()
+            ingredient_ids_to_keep = [ingredient.pk for ingredient, _ in cleaned_rows]
+
+            # 1メニューのレシピ全体を1トランザクションで保存する。
+            # 既存の別メニューのレシピには触れない。
+            with transaction.atomic():
+                Recipe.objects.filter(menu_item=menu_item).exclude(
+                    ingredient_id__in=ingredient_ids_to_keep
+                ).delete()
+
+                for ingredient, quantity in cleaned_rows:
+                    Recipe.objects.update_or_create(
+                        menu_item=menu_item,
+                        ingredient=ingredient,
+                        defaults={"quantity": quantity},
+                    )
+
+            saved_status = "updated" if was_existing else "created"
+            return redirect(
+                f"{reverse('recipe_register')}?menu_item_id={menu_item.pk}"
+                f"&saved={saved_status}"
+            )
+
+    else:
+        raw_selected_menu_id = request.GET.get("menu_item_id", "").strip()
+        if raw_selected_menu_id:
+            try:
+                menu_id_number = int(raw_selected_menu_id)
+                selected_menu = next(
+                    (menu for menu in menus if menu.pk == menu_id_number),
+                    None,
+                )
+            except (TypeError, ValueError):
+                selected_menu = None
+
+            if selected_menu is not None:
+                selected_menu_id = selected_menu.pk
+                saved_recipes = (
+                    Recipe.objects.filter(menu_item=selected_menu)
+                    .select_related("ingredient")
+                    .order_by("ingredient__name")
+                )
+                initial_rows = [
+                    {
+                        "ingredient_id": recipe.ingredient_id,
+                        "amount": str(recipe.quantity),
+                        "unit": recipe.ingredient.unit,
+                    }
+                    for recipe in saved_recipes
+                ]
+                is_editing = bool(initial_rows)
+
+        saved = request.GET.get("saved")
+        if saved == "created":
+            success_message = "レシピを登録しました。"
+        elif saved == "updated":
+            success_message = "レシピを変更しました。"
+
+    recipe_groups = _build_recipe_groups(menus)
+    context = {
+        "menus": menus,
+        "ingredients": ingredients,
+        "recipe_groups": recipe_groups,
+        "selected_menu_id": selected_menu_id,
+        "initial_rows": initial_rows,
+        "is_editing": is_editing,
+        "errors": errors,
+        "success_message": success_message,
+    }
+    return render(request, "recipe_register.html", context)
 
 
 @require_GET
 def customer_order(request, store_id, table_no):
     """QRコードから開くお客様用画面。ログインは不要。"""
-
     request.session["store_id"] = store_id
     request.session["table_no"] = table_no
-
-    context = {
-        "store_id": store_id,
-        "table_no": table_no,
-    }
-
-    return render(request, "customer.html", context)
+    return render(
+        request,
+        "customer.html",
+        {"store_id": store_id, "table_no": table_no},
+    )
 
 
 @require_GET
 def customer_menu(request, store_id, table_no):
     """店舗・テーブルに対応したメニュー商品一覧を表示する。"""
-
     request.session["store_id"] = store_id
     request.session["table_no"] = table_no
-
     products = MenuItem.objects.filter(
         store_id=store_id,
         is_available=True,
     )
-
-    context = {
-        "store_id": store_id,
-        "table_no": table_no,
-        "products": products,
-    }
-
-    return render(request, "product_list.html", context)
+    return render(
+        request,
+        "product_list.html",
+        {
+            "store_id": store_id,
+            "table_no": table_no,
+            "products": products,
+        },
+    )
 
 
 @never_cache
 @require_http_methods(["GET", "POST"])
 def logout_view(request):
     """ログアウト時に現在のセッション情報を解除する。"""
-
     if request.method == "POST":
         if request.user.is_authenticated:
             profile = _get_employee_profile(request.user)
-
             if (
                 profile is not None
-                and profile.active_session_key
-                == request.session.session_key
+                and profile.active_session_key == request.session.session_key
             ):
                 profile.active_session_key = ""
                 profile.save(update_fields=["active_session_key"])

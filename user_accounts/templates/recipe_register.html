@@ -5,98 +5,705 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>レシピの登録</title>
-
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
+    <title>レシピ登録</title>
 
     <style>
-        body {
-            margin: 0;
-            background-color: #f5f5f5;
-            font-family: Arial, sans-serif;
+        * {
+            box-sizing: border-box;
         }
 
-        .navbar {
+        body {
+            margin: 0;
+            font-family: "Noto Sans JP", sans-serif;
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+
+        nav {
             background-color: #212529;
-            padding: 18px 30px;
             color: white;
+            padding: 18px 24px;
             font-size: 20px;
             font-weight: bold;
         }
 
         .container {
-            max-width: 650px;
-            margin: 100px auto 50px;
+            max-width: 1000px;
+            margin: 30px auto;
             padding: 0 20px;
         }
 
         h1 {
-            text-align: center;
-            font-weight: bold;
-            margin-bottom: 35px;
+            font-size: 26px;
+            margin-bottom: 24px;
         }
 
-        .message-card {
-            background-color: white;
-            padding: 40px 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            text-align: center;
+        h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
         }
 
-        .message-card p {
-            color: #666;
-            line-height: 1.8;
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
         }
 
-        .back-button {
+        label {
             display: block;
-            width: 240px;
-            margin: 30px auto 0;
-            text-align: center;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        input,
+        select {
+            display: block;
+            width: 100%;
+            min-height: 42px;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 16px;
+            background-color: white;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #6c757d;
+            box-shadow: 0 0 0 2px rgba(108, 117, 125, 0.15);
+        }
+
+        .menu-field {
+            margin-bottom: 24px;
+        }
+
+        .ingredient-row {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 70px;
+            gap: 12px;
+            align-items: start;
+            margin-bottom: 16px;
+        }
+
+        .field {
+            min-width: 0;
+        }
+
+        .field small {
+            display: block;
+            min-height: 18px;
+            margin-top: 5px;
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        button {
+            border: none;
+            border-radius: 5px;
+            padding: 10px 16px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            opacity: 0.85;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .remove-btn {
+            background: #6c757d;
+            color: white;
+            width: 70px;
+            min-height: 42px;
+            margin-top: 32px;
+            padding: 8px;
+        }
+
+        .add-btn {
+            background: #6c757d;
+            color: white;
+            margin-top: 4px;
+        }
+
+        .register-btn {
+            display: block;
+            background: #212529;
+            color: white;
+            width: 100%;
+            margin-top: 24px;
+            padding: 13px;
+            font-size: 17px;
+        }
+
+        .cancel-btn {
+            display: none;
+            width: 100%;
+            margin-top: 10px;
+            padding: 12px;
+            background: #6c757d;
+            color: white;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .recipe-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .recipe-table th,
+        .recipe-table td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: left;
+            overflow-wrap: anywhere;
+            vertical-align: middle;
+        }
+
+        .recipe-table th {
+            background: #e9ecef;
+        }
+
+        .recipe-table th:first-child {
+            width: 25%;
+        }
+
+        .recipe-table th:last-child {
+            width: 100px;
+        }
+
+        .edit-btn {
+            background: #6c757d;
+            color: white;
+            padding: 8px 14px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .back-buttons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 8px 0 24px;
+        }
+
+        .back-link,
+        .master-back-btn {
+            display: inline-block;
+            padding: 10px 18px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .back-link {
+            background-color: #e9ecef;
+            color: #212529;
+            border: 1px solid #ced4da;
+        }
+
+        .master-back-btn {
             background-color: #212529;
             color: white;
-            padding: 12px;
-            border-radius: 6px;
-            text-decoration: none;
         }
 
-        .back-button:hover {
-            background-color: #343a40;
-            color: white;
+        .back-link:hover {
+            background-color: #dee2e6;
+        }
+
+        .master-back-btn:hover {
+            background-color: #495057;
+        }
+
+        .empty-message {
+            color: #6c757d;
+            text-align: center !important;
+            padding: 20px !important;
+        }
+
+        .notice {
+            color: #6c757d;
+            font-size: 13px;
+            margin-top: 12px;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 5px;
+            margin-bottom: 16px;
+        }
+
+        .alert-success {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #842029;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #664d03;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 0 12px;
+                margin: 20px auto;
+            }
+
+            .card {
+                padding: 16px;
+            }
+
+            .ingredient-row {
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                gap: 12px;
+            }
+
+            .remove-btn {
+                grid-column: 1 / -1;
+                width: 100%;
+                margin-top: 0;
+            }
+
+            .recipe-table {
+                min-width: 520px;
+                font-size: 13px;
+            }
+
+            .recipe-table th,
+            .recipe-table td {
+                padding: 8px;
+            }
+
+            .edit-btn {
+                padding: 7px 10px;
+            }
+
+            .back-buttons {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .back-link,
+            .master-back-btn {
+                text-align: center;
+            }
         }
     </style>
 </head>
 
 <body>
+    <nav>レシピ管理</nav>
 
-    <nav class="navbar">
-        注文連動型 在庫管理・発注支援システム
-    </nav>
+    <main class="container">
+        <h1>レシピ登録</h1>
 
-    <div class="container">
+        {% if success_message %}
+            <div class="alert alert-success" role="status">
+                {{ success_message }}
+            </div>
+        {% endif %}
 
-        <h1>レシピの登録</h1>
+        {% if errors %}
+            <div class="alert alert-danger" role="alert">
+                {% for error in errors %}
+                    <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
 
-        <div class="message-card">
-            <h2 class="h5 mb-4">レシピ登録画面</h2>
+        {% if not menus %}
+            <div class="alert alert-warning">
+                先にメニューを登録してください。
+            </div>
+        {% endif %}
 
-            <p>
-                現在、レシピ登録画面を作成中です。<br>
-                画面が完成するまでお待ちください。
+        {% if not ingredients %}
+            <div class="alert alert-warning">
+                先に食材を登録してください。
+            </div>
+        {% endif %}
+
+        <section class="card">
+            <form id="recipeForm" method="post">
+                {% csrf_token %}
+
+                <div class="menu-field">
+                    <label for="menuName">メニュー名</label>
+
+                    <select id="menuName" name="menu_item_id" required>
+                        <option value="">メニューを選択してください</option>
+
+                        {% for menu in menus %}
+                            <option
+                                value="{{ menu.id }}"
+                                {% if menu.id == selected_menu_id %}selected{% endif %}
+                            >
+                                {{ menu.name }}（店舗ID：{{ menu.store_id }}）
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <h2>使用する食材</h2>
+
+                <div id="ingredientList"></div>
+
+                <button
+                    type="button"
+                    class="add-btn"
+                    id="addIngredient"
+                    {% if not ingredients %}disabled{% endif %}
+                >
+                    ＋ 食材を追加
+                </button>
+
+                <button
+                    type="submit"
+                    class="register-btn"
+                    id="registerBtn"
+                    {% if not menus or not ingredients %}disabled{% endif %}
+                >
+                    {% if is_editing %}変更を保存{% else %}登録{% endif %}
+                </button>
+
+                <button
+                    type="button"
+                    class="cancel-btn"
+                    id="cancelBtn"
+                >
+                    変更をキャンセル
+                </button>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>登録済みレシピ</h2>
+
+            <div class="table-wrapper">
+                <table class="recipe-table">
+                    <thead>
+                        <tr>
+                            <th>メニュー名</th>
+                            <th>使用食材・使用量</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="recipeTableBody">
+                        <tr>
+                            <td colspan="3" class="empty-message">
+                                登録されたレシピはありません
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="notice">
+                ※ 登録・変更した内容はデータベースに保存されます。
             </p>
+        </section>
+
+        <div class="back-buttons">
+            <a
+                href="{% url 'headquarters_master' %}"
+                class="master-back-btn"
+            >
+                マスタ管理に戻る
+            </a>
         </div>
+    </main>
 
-        <a href="{% url 'headquarters_master' %}" class="back-button">
-            マスタ管理に戻る
-        </a>
+    <template id="ingredientRowTemplate">
+        <div class="ingredient-row">
+            <div class="field">
+                <label>食材名</label>
 
-    </div>
+                <select
+                    name="ingredient_id[]"
+                    class="ingredient-select"
+                    required
+                >
+                    <option value="">食材を選択してください</option>
 
+                    {% for ingredient in ingredients %}
+                        <option
+                            value="{{ ingredient.id }}"
+                            data-unit="{{ ingredient.unit }}"
+                        >
+                            {{ ingredient.name }}（{{ ingredient.unit }}）
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label>使用量</label>
+
+                <input
+                    type="number"
+                    name="quantity[]"
+                    class="ingredient-amount"
+                    min="0.001"
+                    step="0.001"
+                    placeholder="例：50"
+                    required
+                >
+
+                <small class="unit-note">単位：—</small>
+            </div>
+
+            <button type="button" class="remove-btn">
+                削除
+            </button>
+        </div>
+    </template>
+
+    {{ recipe_groups|json_script:"recipeGroupsData" }}
+    {{ initial_rows|json_script:"initialRowsData" }}
+
+    <script>
+        const form = document.getElementById("recipeForm");
+        const menuSelect = document.getElementById("menuName");
+        const ingredientList = document.getElementById("ingredientList");
+        const tableBody = document.getElementById("recipeTableBody");
+        const registerBtn = document.getElementById("registerBtn");
+        const cancelBtn = document.getElementById("cancelBtn");
+        const addIngredientBtn = document.getElementById("addIngredient");
+        const rowTemplate = document.getElementById("ingredientRowTemplate");
+
+        const recipeGroups = JSON.parse(
+            document.getElementById("recipeGroupsData").textContent
+        );
+
+        const initialRows = JSON.parse(
+            document.getElementById("initialRowsData").textContent
+        );
+
+        const initialMenuId = "{{ selected_menu_id|default:''|escapejs }}";
+
+        let editing = {{ is_editing|yesno:"true,false" }};
+
+        // 不要な小数点以下のゼロを取り除いて表示する
+        // 例：50.000 → 50、0.500 → 0.5、1.250 → 1.25
+        function formatQuantity(value) {
+            const number = Number(value);
+
+            return Number.isFinite(number)
+                ? String(number)
+                : String(value);
+        }
+
+        function findRecipeGroup(menuId) {
+            return recipeGroups.find(
+                group => String(group.menu_id) === String(menuId)
+            );
+        }
+
+        function updateUnit(row) {
+            const select = row.querySelector(".ingredient-select");
+            const option = select.options[select.selectedIndex];
+            const unit = option ? option.dataset.unit : "";
+
+            row.querySelector(".unit-note").textContent =
+                unit ? `単位：${unit}` : "単位：—";
+        }
+
+        function addIngredientRow(ingredientId = "", amount = "") {
+            const row = rowTemplate.content.firstElementChild.cloneNode(true);
+            const select = row.querySelector(".ingredient-select");
+            const amountInput = row.querySelector(".ingredient-amount");
+            const removeButton = row.querySelector(".remove-btn");
+
+            select.value = ingredientId === null ? "" : String(ingredientId);
+
+            // 入力欄でも不要な小数点以下のゼロを表示しない
+            amountInput.value =
+                amount === null || amount === ""
+                    ? ""
+                    : formatQuantity(amount);
+
+            select.addEventListener("change", () => updateUnit(row));
+
+            removeButton.addEventListener("click", () => {
+                if (
+                    ingredientList.querySelectorAll(".ingredient-row").length <= 1
+                ) {
+                    alert("食材は最低1つ必要です。");
+                    return;
+                }
+
+                row.remove();
+            });
+
+            updateUnit(row);
+            ingredientList.appendChild(row);
+        }
+
+        function setRows(rows) {
+            ingredientList.replaceChildren();
+
+            if (rows && rows.length) {
+                rows.forEach(item => {
+                    addIngredientRow(item.ingredient_id, item.amount);
+                });
+            } else {
+                addIngredientRow();
+            }
+        }
+
+        function updateMode() {
+            const group = findRecipeGroup(menuSelect.value);
+            editing = Boolean(group);
+
+            registerBtn.textContent = editing ? "変更を保存" : "登録";
+            cancelBtn.style.display = editing ? "block" : "none";
+        }
+
+        function createRecipeTableRow(group) {
+            const tr = document.createElement("tr");
+            const menuCell = document.createElement("td");
+            const ingredientsCell = document.createElement("td");
+            const actionCell = document.createElement("td");
+            const editButton = document.createElement("button");
+
+            menuCell.textContent = group.menu_name;
+
+            group.ingredients.forEach((ingredient, index) => {
+                if (index > 0) {
+                    ingredientsCell.appendChild(
+                        document.createElement("br")
+                    );
+                }
+
+                ingredientsCell.appendChild(
+                    document.createTextNode(
+                        `${ingredient.name}：${formatQuantity(ingredient.amount)}${ingredient.unit}`
+                    )
+                );
+            });
+
+            editButton.type = "button";
+            editButton.className = "edit-btn";
+            editButton.textContent = "変更";
+
+            editButton.addEventListener("click", () => {
+                menuSelect.value = String(group.menu_id);
+
+                setRows(
+                    group.ingredients.map(item => ({
+                        ingredient_id: item.ingredient_id,
+                        amount: item.amount,
+                    }))
+                );
+
+                updateMode();
+
+                form.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                });
+            });
+
+            actionCell.appendChild(editButton);
+            tr.append(menuCell, ingredientsCell, actionCell);
+
+            return tr;
+        }
+
+        function renderRecipeTable() {
+            tableBody.replaceChildren();
+
+            if (!recipeGroups.length) {
+                const tr = document.createElement("tr");
+                const td = document.createElement("td");
+
+                td.colSpan = 3;
+                td.className = "empty-message";
+                td.textContent = "登録されたレシピはありません";
+
+                tr.appendChild(td);
+                tableBody.appendChild(tr);
+                return;
+            }
+
+            recipeGroups.forEach(group => {
+                tableBody.appendChild(createRecipeTableRow(group));
+            });
+        }
+
+        menuSelect.addEventListener("change", () => {
+            const group = findRecipeGroup(menuSelect.value);
+
+            if (group) {
+                setRows(
+                    group.ingredients.map(item => ({
+                        ingredient_id: item.ingredient_id,
+                        amount: item.amount,
+                    }))
+                );
+            } else {
+                setRows([]);
+            }
+
+            updateMode();
+        });
+
+        addIngredientBtn.addEventListener("click", () => {
+            addIngredientRow();
+        });
+
+        cancelBtn.addEventListener("click", () => {
+            menuSelect.value = "";
+            setRows([]);
+            editing = false;
+            registerBtn.textContent = "登録";
+            cancelBtn.style.display = "none";
+        });
+
+        renderRecipeTable();
+
+        if (initialRows.length) {
+            setRows(initialRows);
+        } else {
+            const group = findRecipeGroup(initialMenuId);
+
+            if (group) {
+                setRows(
+                    group.ingredients.map(item => ({
+                        ingredient_id: item.ingredient_id,
+                        amount: item.amount,
+                    }))
+                );
+            } else {
+                setRows([]);
+            }
+        }
+
+        updateMode();
+
+        if (initialRows.length) {
+            editing = Boolean(findRecipeGroup(initialMenuId));
+            registerBtn.textContent = editing ? "変更を保存" : "登録";
+            cancelBtn.style.display = editing ? "block" : "none";
+        }
+    </script>
 </body>
 </html>
-
