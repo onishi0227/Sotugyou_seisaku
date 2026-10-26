@@ -488,7 +488,7 @@ def inventory_list(request):
 @never_cache
 @require_http_methods(["GET", "POST"])
 def stocktake_register(request):
-    """店長が実在庫を登録・修正する。"""
+    """店長が実在庫を登録・修正する。0も登録できる。"""
     profile, access_response = _check_store_access(
         request,
         manager_only=True,
@@ -501,10 +501,6 @@ def stocktake_register(request):
     today = timezone.localdate()
 
     ingredients = list(Ingredient.objects.order_by("name"))
-    ingredient_by_id = {
-        ingredient.pk: ingredient
-        for ingredient in ingredients
-    }
 
     today_records = {
         record.ingredient_id: record
@@ -514,6 +510,7 @@ def stocktake_register(request):
         ).select_related("ingredient")
     }
 
+    # 今日すでに登録されている数量を初期表示に使う。
     quantities = {
         ingredient.pk: (
             str(today_records[ingredient.pk].actual_quantity)
@@ -523,46 +520,15 @@ def stocktake_register(request):
         for ingredient in ingredients
     }
 
-    display_ingredients = ingredients
     errors = []
 
     if request.method == "POST":
-        raw_selected_ids = request.POST.getlist("ingredient_ids")
-        selected_ids = []
-        seen_ids = set()
-
-        for raw_id in raw_selected_ids:
-            try:
-                ingredient_id = int(raw_id)
-            except (TypeError, ValueError):
-                errors.append("食材の指定が正しくありません。")
-                continue
-
-            if ingredient_id not in ingredient_by_id:
-                errors.append("登録されていない食材が指定されました。")
-                continue
-
-            if ingredient_id in seen_ids:
-                errors.append("同じ食材が重複して指定されています。")
-                continue
-
-            seen_ids.add(ingredient_id)
-            selected_ids.append(ingredient_id)
-
-        if not selected_ids:
-            errors.append("少なくとも1つの食材を残してください。")
-
-        if selected_ids:
-            display_ingredients = [
-                ingredient
-                for ingredient in ingredients
-                if ingredient.pk in seen_ids
-            ]
-
-        quantities = {}
         validated_rows = []
+        quantities = {}
 
-        for ingredient in display_ingredients:
+        # すべての食材を対象に入力値を確認する。
+        # 選択されなかった食材を削除する処理は行わない。
+        for ingredient in ingredients:
             field_name = f"quantity_{ingredient.pk}"
             raw_quantity = request.POST.get(
                 field_name,
@@ -571,6 +537,7 @@ def stocktake_register(request):
 
             quantities[ingredient.pk] = raw_quantity
 
+            # 空欄はエラー。ただし0は有効な数値。
             if raw_quantity == "":
                 errors.append(
                     f"{ingredient.name}の実在庫数を入力してください。"
@@ -596,22 +563,16 @@ def stocktake_register(request):
 
             validated_rows.append((ingredient, quantity))
 
-        if not errors:
-            selected_id_set = set(selected_ids)
-            previously_saved_ids = set(today_records.keys())
-            removed_today_ids = (
-                previously_saved_ids - selected_id_set
+        if not ingredients:
+            errors.append(
+                "登録されている食材がないため、棚卸を登録できません。"
             )
 
+        if not errors:
             with transaction.atomic():
-                if removed_today_ids:
-                    Stocktake.objects.filter(
-                        store_code=store_code,
-                        stocktake_date=today,
-                        ingredient_id__in=removed_today_ids,
-                    ).delete()
-
                 for ingredient, quantity in validated_rows:
+                    # 同じ店舗・食材・日付なら更新し、
+                    # 初めてなら新規登録する。
                     Stocktake.objects.update_or_create(
                         store_code=store_code,
                         ingredient=ingredient,
@@ -622,6 +583,8 @@ def stocktake_register(request):
                         },
                     )
 
+                    # 理論在庫が存在しない場合のみ初期値を設定する。
+                    # 既存の理論在庫は棚卸入力で上書きしない。
                     TheoreticalStock.objects.get_or_create(
                         store_code=store_code,
                         ingredient=ingredient,
@@ -634,7 +597,8 @@ def stocktake_register(request):
                 f"{reverse('stocktake_complete')}?saved=1"
             )
 
-    for ingredient in display_ingredients:
+    # HTMLで使う入力欄の初期値を設定する。
+    for ingredient in ingredients:
         ingredient.input_quantity = quantities.get(
             ingredient.pk,
             "",
@@ -647,9 +611,9 @@ def stocktake_register(request):
             profile.full_name.strip()
             or profile.user.get_username()
         ),
-        "ingredients": display_ingredients,
+        "ingredients": ingredients,
         "errors": errors,
-        "has_ingredients": bool(display_ingredients),
+        "has_ingredients": bool(ingredients),
         "is_editing": bool(today_records),
     }
 
@@ -980,13 +944,12 @@ def recipe_register(request):
                     )
 
             # 新しいレシピの登録後は、メニュー選択を空に戻す。
-            # これにより、続けて新しいレシピを登録できる。
             if not was_existing:
                 return redirect(
                     f"{reverse('recipe_register')}?saved=created"
                 )
 
-            # 既存レシピの変更後は、変更したメニューを選択して表示する。
+            # 既存レシピの変更後は、変更したメニューを表示する。
             return redirect(
                 f"{reverse('recipe_register')}?menu_item_id={menu_item.pk}"
                 f"&saved=updated"
