@@ -189,7 +189,6 @@
             white-space: nowrap;
         }
 
-        /* 追加：レシピ削除ボタン */
         .delete-btn {
             background: #dc3545;
             color: white;
@@ -442,6 +441,7 @@
             </div>
 
             <p class="notice">
+                ※ 使用量は小数第2位までです。不要な末尾の0は表示しません。<br>
                 ※ 登録・変更・削除したレシピはデータベースに保存されます。
                 削除してもメニュー商品や食材マスタは削除されません。
             </p>
@@ -488,8 +488,8 @@
                     type="number"
                     name="quantity[]"
                     class="ingredient-amount"
-                    min="0.001"
-                    step="0.001"
+                    min="0.01"
+                    step="0.01"
                     placeholder="例：50"
                     required
                 >
@@ -534,6 +534,18 @@
         let editing = {{ is_editing|yesno:"true,false" }};
 
 
+        // 数値を小数第2位までに整え、不要な末尾の0を取り除く。
+        function formatQuantity(value) {
+            const number = Number(value);
+
+            if (!Number.isFinite(number)) {
+                return String(value ?? "");
+            }
+
+            return number.toFixed(2).replace(/\.?0+$/, "");
+        }
+
+
         function findRecipeGroup(menuId) {
             return recipeGroups.find(
                 group => String(group.menu_id) === String(menuId)
@@ -563,9 +575,11 @@
                 ? ""
                 : String(ingredientId);
 
-            amountInput.value = amount === null
+            // 既存データに小数第3位以下がある場合も、
+            // 編集欄には小数第2位までを表示する。
+            amountInput.value = amount === null || amount === ""
                 ? ""
-                : String(amount);
+                : formatQuantity(amount);
 
             select.addEventListener("change", () => updateUnit(row));
 
@@ -619,7 +633,6 @@
 
 
         // 削除用のPOSTフォームを生成する。
-        // GETで削除せず、CSRFトークン付きPOSTで送信する。
         function createDeleteForm(group) {
             const deleteForm = document.createElement("form");
 
@@ -689,7 +702,7 @@
 
                 ingredientsCell.appendChild(
                     document.createTextNode(
-                        `${ingredient.name}：${ingredient.amount}${ingredient.unit}`
+                        `${ingredient.name}：${formatQuantity(ingredient.amount)}${ingredient.unit}`
                     )
                 );
             });
@@ -716,7 +729,6 @@
                 });
             });
 
-            // 既存の変更ボタンに加えて、削除ボタンを配置する。
             const deleteForm = createDeleteForm(group);
 
             actionCell.appendChild(editButton);
@@ -753,6 +765,33 @@
                 );
             });
         }
+
+
+        // 登録時に数値が小数第2位までであることを確認する。
+        form.addEventListener("submit", function(event) {
+            const amountInputs = ingredientList.querySelectorAll(
+                ".ingredient-amount"
+            );
+
+            for (const input of amountInputs) {
+                const value = input.value.trim();
+                const number = Number(value);
+
+                if (
+                    value === ""
+                    || !Number.isFinite(number)
+                    || number < 0.01
+                    || Math.abs(number * 100 - Math.round(number * 100)) > 0.000001
+                ) {
+                    event.preventDefault();
+                    alert(
+                        "使用量は0.01以上、小数第2位までの数値を入力してください。"
+                    );
+                    input.focus();
+                    return;
+                }
+            }
+        });
 
 
         menuSelect.addEventListener("change", () => {

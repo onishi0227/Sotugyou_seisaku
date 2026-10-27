@@ -29,10 +29,7 @@ HEADQUARTERS_PORTAL = "headquarters"
 
 
 def _format_quantity(value):
-    """
-    数量を小数第2位までに丸めて表示する。
-    不要な末尾の0と小数点は取り除く。
-    """
+    """数量を小数第2位までに丸め、不要な末尾の0を取り除く。"""
     quantity = Decimal(str(value)).quantize(
         Decimal("0.01"),
         rounding=ROUND_HALF_UP,
@@ -531,8 +528,6 @@ def stocktake_register(request):
         ).select_related("ingredient")
     }
 
-    # 登録済みの数値を小数第2位までに整形する。
-    # 末尾の0や不要な小数点は表示しない。
     quantities = {
         ingredient.pk: (
             _format_quantity(
@@ -557,7 +552,6 @@ def stocktake_register(request):
                 "",
             ).strip()
 
-            # エラー時に入力内容を画面へ戻すために保持する。
             quantities[ingredient.pk] = raw_quantity
 
             if raw_quantity == "":
@@ -573,7 +567,7 @@ def stocktake_register(request):
                     not quantity.is_finite()
                     or quantity < Decimal("0")
                     or quantity >= Decimal("1000000000")
-                    or quantity.normalize().as_tuple().exponent < -2
+                    or quantity.as_tuple().exponent < -2
                 ):
                     raise InvalidOperation
 
@@ -603,7 +597,6 @@ def stocktake_register(request):
                         },
                     )
 
-                    # 理論在庫が存在しない場合だけ初期値を設定する。
                     TheoreticalStock.objects.get_or_create(
                         store_code=store_code,
                         ingredient=ingredient,
@@ -617,14 +610,10 @@ def stocktake_register(request):
             )
 
     for ingredient in ingredients:
-        raw_value = quantities.get(ingredient.pk, "")
-
-        # GET時およびエラー後の表示を整える。
-        # 入力エラーが発生した場合は、入力された値そのものを保持する。
-        if request.method == "GET":
-            ingredient.input_quantity = raw_value
-        else:
-            ingredient.input_quantity = raw_value
+        ingredient.input_quantity = quantities.get(
+            ingredient.pk,
+            "",
+        )
 
     context = {
         "store_code": store_code,
@@ -788,6 +777,7 @@ def recipe_register(request):
     )
     ingredients = list(Ingredient.objects.order_by("name"))
 
+    # 登録済みレシピの削除
     if (
         request.method == "POST"
         and request.POST.get("action") == "delete"
@@ -909,13 +899,14 @@ def recipe_register(request):
                 else:
                     seen_ingredient_ids.add(ingredient.pk)
 
+                # 使用量は0.01以上、小数第2位までに制限する。
                 try:
                     quantity = Decimal(raw_quantity)
 
                     if (
                         not quantity.is_finite()
-                        or quantity < Decimal("0.001")
-                        or quantity.as_tuple().exponent < -3
+                        or quantity < Decimal("0.01")
+                        or quantity.as_tuple().exponent < -2
                         or quantity >= Decimal("1000000000")
                     ):
                         raise InvalidOperation
@@ -923,7 +914,7 @@ def recipe_register(request):
                 except (InvalidOperation, ValueError):
                     quantity = None
                     errors.append(
-                        "使用量は0.001以上、小数第3位までの数値を入力してください。"
+                        "使用量は0.01以上、小数第2位までの数値を入力してください。"
                     )
 
             initial_rows.append(
