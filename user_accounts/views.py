@@ -1,4 +1,4 @@
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.contrib.auth import authenticate
 from django.contrib.auth import login as auth_login
@@ -26,6 +26,27 @@ LOGIN_PORTAL_SESSION_KEY = "login_portal"
 
 STORE_PORTAL = "store"
 HEADQUARTERS_PORTAL = "headquarters"
+
+
+def _format_quantity(value):
+    """
+    数量を小数第2位までに丸めて表示する。
+    不要な末尾の0と小数点は取り除く。
+    """
+    quantity = Decimal(str(value)).quantize(
+        Decimal("0.01"),
+        rounding=ROUND_HALF_UP,
+    )
+
+    if quantity == 0:
+        return "0"
+
+    formatted = format(quantity, "f")
+
+    if "." in formatted:
+        formatted = formatted.rstrip("0").rstrip(".")
+
+    return formatted
 
 
 def _get_employee_profile(user):
@@ -510,10 +531,13 @@ def stocktake_register(request):
         ).select_related("ingredient")
     }
 
-    # 今日すでに登録されている数量を初期表示に使う。
+    # 登録済みの数値を小数第2位までに整形する。
+    # 末尾の0や不要な小数点は表示しない。
     quantities = {
         ingredient.pk: (
-            str(today_records[ingredient.pk].actual_quantity)
+            _format_quantity(
+                today_records[ingredient.pk].actual_quantity
+            )
             if ingredient.pk in today_records
             else ""
         )
@@ -526,8 +550,6 @@ def stocktake_register(request):
         validated_rows = []
         quantities = {}
 
-        # すべての食材を対象に入力値を確認する。
-        # 選択されなかった食材を削除する処理は行わない。
         for ingredient in ingredients:
             field_name = f"quantity_{ingredient.pk}"
             raw_quantity = request.POST.get(
@@ -535,9 +557,9 @@ def stocktake_register(request):
                 "",
             ).strip()
 
+            # エラー時に入力内容を画面へ戻すために保持する。
             quantities[ingredient.pk] = raw_quantity
 
-            # 空欄はエラー。ただし0は有効な数値。
             if raw_quantity == "":
                 errors.append(
                     f"{ingredient.name}の実在庫数を入力してください。"
@@ -550,14 +572,14 @@ def stocktake_register(request):
                 if (
                     not quantity.is_finite()
                     or quantity < Decimal("0")
-                    or quantity.as_tuple().exponent < -3
                     or quantity >= Decimal("1000000000")
+                    or quantity.normalize().as_tuple().exponent < -2
                 ):
                     raise InvalidOperation
 
             except (InvalidOperation, ValueError):
                 errors.append(
-                    f"{ingredient.name}は0以上、小数第3位までの数値を入力してください。"
+                    f"{ingredient.name}は0以上、小数第2位までの数値を入力してください。"
                 )
                 continue
 
@@ -571,8 +593,6 @@ def stocktake_register(request):
         if not errors:
             with transaction.atomic():
                 for ingredient, quantity in validated_rows:
-                    # 同じ店舗・食材・日付なら更新し、
-                    # 初めてなら新規登録する。
                     Stocktake.objects.update_or_create(
                         store_code=store_code,
                         ingredient=ingredient,
@@ -583,8 +603,7 @@ def stocktake_register(request):
                         },
                     )
 
-                    # 理論在庫が存在しない場合のみ初期値を設定する。
-                    # 既存の理論在庫は棚卸入力で上書きしない。
+                    # 理論在庫が存在しない場合だけ初期値を設定する。
                     TheoreticalStock.objects.get_or_create(
                         store_code=store_code,
                         ingredient=ingredient,
@@ -597,12 +616,15 @@ def stocktake_register(request):
                 f"{reverse('stocktake_complete')}?saved=1"
             )
 
-    # HTMLで使う入力欄の初期値を設定する。
     for ingredient in ingredients:
-        ingredient.input_quantity = quantities.get(
-            ingredient.pk,
-            "",
-        )
+        raw_value = quantities.get(ingredient.pk, "")
+
+        # GET時およびエラー後の表示を整える。
+        # 入力エラーが発生した場合は、入力された値そのものを保持する。
+        if request.method == "GET":
+            ingredient.input_quantity = raw_value
+        else:
+            ingredient.input_quantity = raw_value
 
     context = {
         "store_code": store_code,
@@ -766,7 +788,6 @@ def recipe_register(request):
     )
     ingredients = list(Ingredient.objects.order_by("name"))
 
-    # 登録済みレシピの削除
     if (
         request.method == "POST"
         and request.POST.get("action") == "delete"
@@ -943,13 +964,11 @@ def recipe_register(request):
                         defaults={"quantity": quantity},
                     )
 
-            # 新しいレシピの登録後は、メニュー選択を空に戻す。
             if not was_existing:
                 return redirect(
                     f"{reverse('recipe_register')}?saved=created"
                 )
 
-            # 既存レシピの変更後は、変更したメニューを表示する。
             return redirect(
                 f"{reverse('recipe_register')}?menu_item_id={menu_item.pk}"
                 f"&saved=updated"
