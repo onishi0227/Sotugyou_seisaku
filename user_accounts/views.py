@@ -1,4 +1,11 @@
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from datetime import timedelta
+import re
+from decimal import (
+    Decimal,
+    InvalidOperation,
+    ROUND_HALF_UP,
+    ROUND_CEILING,
+)
 
 from django.contrib.auth import authenticate
 from django.contrib.auth import login as auth_login
@@ -13,9 +20,11 @@ from django.views.decorators.http import require_GET, require_http_methods
 
 from .forms import AccountCreationForm, IngredientForm, MenuItemForm
 from .models import (
+    CustomerOrder,
     EmployeeProfile,
     Ingredient,
     MenuItem,
+    OrderDetail,
     Recipe,
     Stocktake,
     TheoreticalStock,
@@ -138,6 +147,24 @@ def _check_store_access(request, manager_only=False):
     return profile, None
 
 
+def _get_store_id_from_code(store_code):
+    """
+    店舗コード末尾の数字から店舗IDを取得する。
+
+    暫定ルール：
+    STORE001 -> 1
+    213      -> 213
+
+    店舗コードと店舗IDの正式な対応表ができたら変更する。
+    """
+    match = re.search(r"(\d+)$", store_code.strip())
+
+    if match is None:
+        return None
+
+    return int(match.group(1))
+
+
 def _build_recipe_groups(menus):
     """登録済みレシピをメニュー単位にまとめ、画面表示用データを作る。"""
     groups = []
@@ -174,6 +201,165 @@ def _build_recipe_groups(menus):
             )
 
     return groups
+
+
+def _build_stockout_prediction_rows(store_code, store_id):
+    """
+    過去7日間の注文とレシピから、在庫切れ予測の表示行を計算する。
+    計算結果はデータベースへ保存しない。
+    """
+    now = timezone.now()
+    today = timezone.localdate()
+    start_time = now - timedelta(days=7)
+
+    ingredients = list(Ingredient.objects.order_by("name"))
+
+    # 店舗ごとの理論在庫を取得する。理論在庫の数量は画面に表示しない。
+    stock_by_ingredient = {
+        stock.ingredient_id: stock
+        for stock in TheoreticalStock.objects.filter(
+            store_code=store_code,
+        )
+    }
+
+    # 食材ごとに、過去7日間の使用量を集計する。
+    total_used = {
+        ingredient.pk: Decimal("0")
+        for ingredient in ingredients
+    }
+
+    order_details = (
+        OrderDetail.objects.filter(
+            order__store_id=store_id,
+            order__ordered_at__gte=start_time,
+            order__ordered_at__lte=now,
+            menu_item__store_id=store_id,
+        )
+        .select_related("order", "menu_item")
+        .prefetch_related("menu_item__recipes")
+    )
+
+    for detail in order_details:
+        ordered_quantity = Decimal(detail.quantity)
+
+        for recipe in detail.menu_item.recipes.all():
+            total_used[recipe.ingredient_id] += (
+                recipe.quantity * ordered_quantity
+            )
+
+    rows = []
+
+    for ingredient in ingredients:
+        used_quantity = total_used.get(
+            ingredient.pk,
+            Decimal("0"),
+        )
+
+        # ① 1日平均使用量 = 過去7日の使用量 / 7
+        daily_average = used_quantity / Decimal("7")
+
+        daily_average_display = (
+            f"{_format_quantity(daily_average)}{ingredient.unit}"
+        )
+
+        stock = stock_by_ingredient.get(ingredient.pk)
+
+        days_remaining = None
+        stockout_date = None
+        recommended_order_date = None
+        recommended_quantity = Decimal("0")
+        needs_order = False
+        missing_stock = False
+        urgent = False
+
+        # ② 平均使用量が0の場合、残り日数は「—」、判定はOK。
+        if daily_average == 0:
+            judgment = "OK"
+            judgment_class = "safe"
+            days_remaining_display = "—"
+            stockout_date_display = "—"
+            order_date_display = "—"
+            recommended_quantity_display = "0"
+
+        elif stock is None:
+            # 理論在庫がない場合は0と決めつけず、登録不足を明示する。
+            judgment = "理論在庫未登録"
+            judgment_class = "warning"
+            days_remaining_display = "—"
+            stockout_date_display = "—"
+            order_date_display = "—"
+            recommended_quantity_display = "—"
+            missing_stock = True
+
+        else:
+            # ③ 残り日数 = 理論在庫 / 1日平均使用量
+            days_remaining = stock.quantity / daily_average
+
+            # ④ 在庫切れ予測日。小数部分は切り捨てる。
+            stockout_date = today + timedelta(
+                days=int(days_remaining)
+            )
+
+            # ⑤ 発注推奨日 = 在庫切れ予測日 - 納品日数
+            recommended_order_date = stockout_date - timedelta(
+                days=ingredient.delivery_days
+            )
+
+            # ⑥ 推奨数 = 平均使用量 * (納品日数 + 2日)
+            # 小数が発生した場合は切り上げる。
+            recommended_quantity = (
+                daily_average
+                * Decimal(ingredient.delivery_days + 2)
+            ).quantize(
+                Decimal("1"),
+                rounding=ROUND_CEILING,
+            )
+
+            # 判定には小数を切り捨てる前の残り日数を使用する。
+            needs_order = (
+                days_remaining <= Decimal(ingredient.delivery_days)
+            )
+
+            judgment = "発注が必要" if needs_order else "OK"
+            judgment_class = "danger" if needs_order else "safe"
+
+            days_remaining_display = (
+                f"{_format_quantity(days_remaining)}日"
+            )
+            stockout_date_display = stockout_date.strftime("%Y/%m/%d")
+            order_date_display = (
+                recommended_order_date.strftime("%Y/%m/%d")
+            )
+            recommended_quantity_display = (
+                f"{int(recommended_quantity):,}{ingredient.unit}"
+            )
+
+            # 発注推奨日が今日以前の場合は、行を赤く強調する。
+            urgent = recommended_order_date <= today
+
+        rows.append(
+            {
+                "ingredient": ingredient,
+                "judgment": judgment,
+                "judgment_class": judgment_class,
+                "daily_average_display": daily_average_display,
+                "days_remaining_display": days_remaining_display,
+                "stockout_date_display": stockout_date_display,
+                "delivery_days": ingredient.delivery_days,
+                "order_date_display": order_date_display,
+                "recommended_quantity_display": (
+                    recommended_quantity_display
+                ),
+                "recommended_quantity_raw": str(
+                    int(recommended_quantity)
+                ),
+                "needs_order": needs_order,
+                "missing_stock": missing_stock,
+                "urgent": urgent,
+            }
+        )
+
+    return rows
 
 
 @never_cache
@@ -499,6 +685,43 @@ def inventory_list(request):
         {
             "inventory_rows": inventory_rows,
             "store_code": store_code,
+        },
+    )
+
+
+@never_cache
+@require_GET
+def stockout_prediction(request):
+    """店長専用の在庫切れ予測画面を表示する。"""
+    profile, access_response = _check_store_access(
+        request,
+        manager_only=True,
+    )
+
+    if access_response is not None:
+        return access_response
+
+    store_code = profile.store_code.strip()
+    store_id = _get_store_id_from_code(store_code)
+
+    if store_id is None:
+        return HttpResponseForbidden(
+            "所属店舗コードから店舗IDを取得できません。管理者に確認してください。"
+        )
+
+    rows = _build_stockout_prediction_rows(
+        store_code=store_code,
+        store_id=store_id,
+    )
+
+    return render(
+        request,
+        "stockout_prediction.html",
+        {
+            "rows": rows,
+            "today": timezone.localdate(),
+            "store_code": store_code,
+            "store_id": store_id,
         },
     )
 
@@ -1041,6 +1264,7 @@ def recipe_register(request):
     )
 
 
+@never_cache
 @require_GET
 def customer_order(request, store_id, table_no):
     """QRコードから開くお客様用画面。ログインは不要。"""
@@ -1063,9 +1287,11 @@ def customer_menu(request, store_id, table_no):
     request.session["store_id"] = store_id
     request.session["table_no"] = table_no
 
-    products = MenuItem.objects.filter(
-        store_id=store_id,
-        is_available=True,
+    products = list(
+        MenuItem.objects.filter(
+            store_id=store_id,
+            is_available=True,
+        ).order_by("sort_order", "id")
     )
 
     return render(
@@ -1075,6 +1301,230 @@ def customer_menu(request, store_id, table_no):
             "store_id": store_id,
             "table_no": table_no,
             "products": products,
+            "errors": [],
+            "order_success": request.GET.get("ordered") == "1",
+            "order_id": request.GET.get("order_id", ""),
+        },
+    )
+
+
+@require_http_methods(["POST"])
+def customer_order_submit(request, store_id, table_no):
+    """お客様が選択したメニューと数量を注文として保存する。"""
+    request.session["store_id"] = store_id
+    request.session["table_no"] = table_no
+
+    products = list(
+        MenuItem.objects.filter(
+            store_id=store_id,
+            is_available=True,
+        ).order_by("sort_order", "id")
+    )
+
+    errors = []
+    quantities = {}
+    order_lines = []
+
+    if not products:
+        errors.append("現在、販売中の商品はありません。")
+
+    for product in products:
+        field_name = f"quantity_{product.pk}"
+        raw_quantity = request.POST.get(field_name, "0").strip()
+
+        if raw_quantity == "":
+            raw_quantity = "0"
+
+        try:
+            quantity = Decimal(raw_quantity)
+
+            if (
+                not quantity.is_finite()
+                or quantity < 0
+                or quantity != quantity.to_integral_value()
+                or quantity > 99
+            ):
+                raise InvalidOperation
+
+        except (InvalidOperation, ValueError):
+            errors.append(
+                f"{product.name}の数量は0～99の整数で入力してください。"
+            )
+            quantities[product.pk] = raw_quantity
+            continue
+
+        quantity_int = int(quantity)
+        quantities[product.pk] = quantity_int
+
+        if quantity_int > 0:
+            order_lines.append((product, quantity_int))
+
+    if products and not errors and not order_lines:
+        errors.append("注文する商品を1つ以上選択してください。")
+
+    for product in products:
+        product.order_quantity = quantities.get(product.pk, 0)
+
+    if errors:
+        return render(
+            request,
+            "product_list.html",
+            {
+                "store_id": store_id,
+                "table_no": table_no,
+                "products": products,
+                "errors": errors,
+                "order_success": False,
+                "order_id": "",
+            },
+        )
+
+    with transaction.atomic():
+        order = CustomerOrder.objects.create(
+            store_id=store_id,
+            table_no=table_no,
+        )
+
+        OrderDetail.objects.bulk_create(
+            [
+                OrderDetail(
+                    order=order,
+                    menu_item=product,
+                    quantity=quantity,
+                )
+                for product, quantity in order_lines
+            ]
+        )
+
+    return redirect(
+        f"{reverse('customer_menu', kwargs={'store_id': store_id, 'table_no': table_no})}"
+        f"?ordered=1&order_id={order.pk}"
+    )
+
+
+@never_cache
+@require_http_methods(["POST"])
+def stockout_order_registration(request):
+    """予測画面で選択した食材を、発注登録画面へ引き渡す。"""
+    profile, access_response = _check_store_access(
+        request,
+        manager_only=True,
+    )
+
+    if access_response is not None:
+        return access_response
+
+    store_code = profile.store_code.strip()
+    store_id = _get_store_id_from_code(store_code)
+
+    if store_id is None:
+        return HttpResponseForbidden(
+            "所属店舗コードから店舗IDを取得できません。"
+        )
+
+    rows = _build_stockout_prediction_rows(
+        store_code=store_code,
+        store_id=store_id,
+    )
+
+    selected_ids = set()
+
+    for raw_id in request.POST.getlist("ingredient_ids"):
+        try:
+            selected_ids.add(int(raw_id))
+        except (TypeError, ValueError):
+            continue
+
+    if not selected_ids:
+        return render(
+            request,
+            "stockout_prediction.html",
+            {
+                "rows": rows,
+                "today": timezone.localdate(),
+                "store_code": store_code,
+                "store_id": store_id,
+                "errors": ["発注する食材を選んでください。"],
+            },
+        )
+
+    selected_items = []
+
+    for row in rows:
+        ingredient = row["ingredient"]
+
+        if ingredient.pk not in selected_ids:
+            continue
+
+        if row["missing_stock"]:
+            continue
+
+        selected_items.append(
+            {
+                "id": ingredient.pk,
+                "ingredient_id": ingredient.pk,
+                "name": ingredient.name,
+                "ingredient_name": ingredient.name,
+                "unit": ingredient.unit,
+                "quantity": row["recommended_quantity_raw"],
+                "recommended_quantity": row["recommended_quantity_raw"],
+                "delivery_days": ingredient.delivery_days,
+            }
+        )
+
+    if not selected_items:
+        return render(
+            request,
+            "stockout_prediction.html",
+            {
+                "rows": rows,
+                "today": timezone.localdate(),
+                "store_code": store_code,
+                "store_id": store_id,
+                "errors": [
+                    "選択した食材に理論在庫未登録のものがあります。"
+                    "棚卸登録を確認してください。"
+                ],
+            },
+        )
+
+    request.session["stockout_selected_items"] = selected_items
+    request.session["stockout_selected_store_code"] = store_code
+
+    return redirect("stockout_order_registration_page")
+
+
+@never_cache
+@require_GET
+def stockout_order_registration_page(request):
+    """予測画面から選択された発注内容を既存の登録画面へ渡す。"""
+    profile, access_response = _check_store_access(
+        request,
+        manager_only=True,
+    )
+
+    if access_response is not None:
+        return access_response
+
+    selected_items = request.session.get("stockout_selected_items", [])
+
+    if not selected_items:
+        return redirect("stockout_prediction")
+
+    return render(
+        request,
+        "order_registration.html",
+        {
+            "selected_items": selected_items,
+            "order_items": selected_items,
+            "ingredients": selected_items,
+            "store_code": profile.store_code.strip(),
+            "manager_name": (
+                profile.full_name.strip()
+                or profile.user.get_username()
+            ),
+            "today": timezone.localdate(),
+            "from_stockout_prediction": True,
         },
     )
 

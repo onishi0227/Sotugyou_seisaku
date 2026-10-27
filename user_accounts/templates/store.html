@@ -152,7 +152,7 @@
     <div class="container">
 
         <span class="system-name">
-            注文連動型 在庫管理・発注支援システム
+            注文連携型 在庫管理・発注支援システム
         </span>
 
         <a href="{% url 'logout' %}"
@@ -203,15 +203,15 @@
                     </div>
                 </a>
 
-                    <!-- 在庫一覧 -->
-                    <a href="{% url 'inventory_list' %}" class="management-card">
-                        <div class="management-title">
-                            <div class="management-icon">
-                                <i class="fa-solid fa-boxes-stacked"></i>
-                            </div>
-                            <h3>在庫一覧</h3>
+                <!-- 在庫一覧 -->
+                <a href="{% url 'inventory_list' %}" class="management-card">
+                    <div class="management-title">
+                        <div class="management-icon">
+                            <i class="fa-solid fa-boxes-stacked"></i>
                         </div>
-                    </a>
+                        <h3>在庫一覧</h3>
+                    </div>
+                </a>
 
             </div>
         </div>
@@ -228,7 +228,7 @@
 
                 <!-- 棚卸登録 -->
                 <a href="{% url 'stocktake_register' %}"
-                class="management-card">
+                   class="management-card">
                     <div class="management-title">
                         <div class="management-icon">
                             <i class="fa-solid fa-clipboard-check"></i>
@@ -238,7 +238,8 @@
                 </a>
 
                 <!-- 在庫切れ予測 -->
-                <a href="#" class="management-card">
+                <a href="{% url 'stockout_prediction' %}"
+                   class="management-card">
                     <div class="management-title">
                         <div class="management-icon">
                             <i class="fa-solid fa-chart-line"></i>

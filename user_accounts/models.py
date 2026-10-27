@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 
 class EmployeeProfile(models.Model):
@@ -289,4 +290,65 @@ class TheoreticalStock(models.Model):
         return (
             f"{self.store_code}：{self.ingredient.name} "
             f"{self.quantity}{self.ingredient.unit}"
+        )
+
+
+class CustomerOrder(models.Model):
+    """お客様の注文情報を保存する。"""
+
+    store_id = models.PositiveIntegerField(
+        db_index=True,
+        verbose_name="店舗ID",
+    )
+    table_no = models.PositiveIntegerField(
+        verbose_name="テーブル番号",
+    )
+    ordered_at = models.DateTimeField(
+        default=timezone.now,
+        db_index=True,
+        verbose_name="注文日時",
+    )
+
+    class Meta:
+        verbose_name = "注文"
+        verbose_name_plural = "注文"
+        ordering = ["-ordered_at", "-id"]
+
+    def __str__(self):
+        return (
+            f"注文ID：{self.pk} "
+            f"（店舗ID：{self.store_id}、"
+            f"テーブル：{self.table_no}）"
+        )
+
+
+class OrderDetail(models.Model):
+    """注文に含まれるメニューと注文数量を保存する。"""
+
+    order = models.ForeignKey(
+        CustomerOrder,
+        on_delete=models.CASCADE,
+        related_name="details",
+        verbose_name="注文",
+    )
+    menu_item = models.ForeignKey(
+        MenuItem,
+        on_delete=models.PROTECT,
+        related_name="order_details",
+        verbose_name="メニュー",
+    )
+    quantity = models.PositiveIntegerField(
+        validators=[MinValueValidator(1)],
+        verbose_name="注文数量",
+    )
+
+    class Meta:
+        verbose_name = "注文明細"
+        verbose_name_plural = "注文明細"
+        ordering = ["order_id", "id"]
+
+    def __str__(self):
+        return (
+            f"{self.menu_item.name} "
+            f"× {self.quantity}"
         )

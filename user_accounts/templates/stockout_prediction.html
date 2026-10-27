@@ -1,0 +1,416 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在庫切れ予測・発注支援</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Noto Sans JP", sans-serif;
+            background-color: #fff;
+            color: #212529;
+        }
+
+        /* ナビゲーションバー */
+        .navbar {
+            background-color: #212529;
+            color: white;
+            padding: 18px 30px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* メインコンテンツ */
+        .container {
+            max-width: 1300px;
+            margin: 35px auto;
+            padding: 0 25px;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin: 0 0 10px;
+        }
+
+        .description {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 21px;
+            margin-bottom: 15px;
+        }
+
+        /* 確認日 */
+        .date-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .date-area label {
+            font-weight: bold;
+        }
+
+        .date-area input {
+            padding: 9px 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 15px;
+            background-color: white;
+        }
+
+        /* 表の外枠 */
+        .table-container {
+            overflow-x: auto;
+            width: 100%;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        table {
+            width: 100%;
+            min-width: 850px;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 16px 12px;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        th {
+            background-color: #343a40;
+            color: white;
+            font-weight: normal;
+            white-space: nowrap;
+        }
+
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        /* 発注が必要な食品 */
+        .warning {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        /* エラーメッセージ */
+        .error-message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            background-color: #f8d7da;
+            color: #842029;
+            border: 1px solid #f5c2c7;
+            border-radius: 6px;
+        }
+
+        .error-message p {
+            margin: 0;
+        }
+
+        /* ボタンエリア：表の外側 */
+        .button-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 25px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .order-button,
+        .store-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: fit-content;
+            max-width: 100%;
+            padding: 13px 25px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            font-family: inherit;
+        }
+
+        /* 発注ボタン */
+        .order-button {
+            background-color: #999;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .order-button.has-selection {
+            background-color: #212529;
+        }
+
+        .order-button:hover {
+            background-color: #343a40;
+        }
+
+        /* 戻るボタン */
+        .store-button {
+            background-color: #212529;
+            color: white;
+            text-decoration: none;
+            border: none;
+        }
+
+        .store-button:hover {
+            background-color: #343a40;
+            color: white;
+        }
+
+        /* 選択状況のメッセージ */
+        .message {
+            margin-top: 15px;
+            text-align: center;
+            color: #198754;
+            font-weight: bold;
+        }
+
+        /* 説明欄 */
+        .note {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f1f3f5;
+            border: 1px solid #dee2e6;
+            color: #495057;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        /* スマートフォン対応 */
+        @media (max-width: 600px) {
+            .navbar {
+                padding: 16px 20px;
+                font-size: 17px;
+            }
+
+            .container {
+                margin-top: 25px;
+                padding: 0 15px;
+            }
+
+            h1 {
+                font-size: 23px;
+            }
+
+            .button-area {
+                gap: 10px;
+            }
+
+            .order-button,
+            .store-button {
+                padding: 11px 12px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- ナビゲーションバー -->
+    <header class="navbar">
+        注文連携型 在庫管理・発注支援システム
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="container">
+        <h1>在庫切れ予測・発注支援</h1>
+
+        <p class="description">
+            最終棚卸の実在庫数を確認し、発注が必要な食材を選択できます。
+        </p>
+
+        <section>
+            <h2 class="section-title">発注が必要な食品</h2>
+
+            <!-- 確認日 -->
+            <div class="date-area">
+                <label for="prediction-date">確認日</label>
+                <input
+                    type="date"
+                    id="prediction-date"
+                    value="{{ today|date:'Y-m-d' }}"
+                    readonly
+                >
+            </div>
+
+            <!-- エラーメッセージ -->
+            {% if errors %}
+                <div class="error-message">
+                    {% for error in errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form
+                method="post"
+                action="{% url 'stockout_order_registration' %}"
+                id="prediction-form"
+            >
+                {% csrf_token %}
+
+                <!-- 白い枠の中は表だけ -->
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>選択</th>
+                                <th>食品名</th>
+                                <th>数量</th>
+                                <th>最終棚卸の実在庫数</th>
+                                <th>最終棚卸日</th>
+                                <th>推奨発注数</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for row in rows %}
+                                <tr>
+                                    <td>
+                                        <input
+                                            type="checkbox"
+                                            class="ingredient-check"
+                                            name="ingredient_ids"
+                                            value="{{ row.ingredient.pk }}"
+                                            aria-label="{{ row.ingredient.name }}を選択"
+                                            {% if row.needs_order and not row.missing_stock %}checked{% endif %}
+                                            {% if row.missing_stock %}disabled{% endif %}
+                                        >
+                                    </td>
+
+                                    <td class="{% if row.needs_order %}warning{% endif %}">
+                                        {{ row.ingredient.name }}
+                                    </td>
+
+                                    <td>
+                                        {{ row.ingredient.unit }}
+                                    </td>
+
+                                    <td class="{% if row.needs_order %}warning{% endif %}">
+                                        {{ row.actual_stock_display|default:"未登録" }}
+                                    </td>
+
+                                    <td>
+                                        {{ row.stocktake_date_display|default:"—" }}
+                                    </td>
+
+                                    <td class="{% if row.needs_order %}warning{% endif %}">
+                                        {{ row.recommended_quantity_display }}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6">
+                                        登録されている食材がありません。
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 白い枠の外にボタンを配置 -->
+                <div class="button-area">
+                    <a
+                        href="{% url 'store_top' %}"
+                        class="store-button"
+                    >
+                        店舗管理者用画面に戻る
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="order-button"
+                        id="order-button"
+                    >
+                        選択した食材を発注する
+                    </button>
+                </div>
+            </form>
+
+            <p class="message" id="message" role="status"></p>
+
+            <div class="note">
+                計算結果は画面を開くたびに計算されます。
+                理論在庫の数量は表示しません。
+                「発注が必要」の食材は最初から選択されます。
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const form = document.getElementById("prediction-form");
+        const checkboxes = document.querySelectorAll(".ingredient-check");
+        const orderButton = document.getElementById("order-button");
+        const message = document.getElementById("message");
+
+        // 選択状況に応じてボタンとメッセージを変更する
+        function updateOrderButton() {
+            const hasChecked = Array.from(checkboxes).some(
+                checkbox => checkbox.checked
+            );
+
+            orderButton.classList.toggle(
+                "has-selection",
+                hasChecked
+            );
+
+            message.textContent = hasChecked
+                ? "発注する食品が選択されています。"
+                : "";
+        }
+
+        checkboxes.forEach(function (checkbox) {
+            checkbox.addEventListener(
+                "change",
+                updateOrderButton
+            );
+        });
+
+        // 選択した食材をDjangoに送信する
+        form.addEventListener("submit", function (event) {
+            const selected = document.querySelectorAll(
+                ".ingredient-check:checked"
+            );
+
+            if (selected.length === 0) {
+                event.preventDefault();
+                alert("発注する食材を選んでください。");
+            }
+        });
+
+        updateOrderButton();
+    </script>
+</body>
+</html>

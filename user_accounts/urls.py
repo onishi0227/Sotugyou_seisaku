@@ -62,6 +62,25 @@ urlpatterns = [
         name="stocktake_complete",
     ),
 
+    # S-13 在庫切れ予測画面（店長専用）
+    path(
+        "store/stockout-prediction",
+        views.stockout_prediction,
+        name="stockout_prediction",
+    ),
+
+    # 選択した食材の発注登録画面
+    path(
+        "store/stockout-prediction/order-registration",
+        views.stockout_order_registration,
+        name="stockout_order_registration",
+    ),
+    path(
+        "store/order-registration",
+        views.stockout_order_registration_page,
+        name="stockout_order_registration_page",
+    ),
+
     # S-16 本社管理者トップ画面
     path(
         "headquarters/top",
@@ -105,5 +124,12 @@ urlpatterns = [
         "order/<int:store_id>/<int:table_no>/menu",
         views.customer_menu,
         name="customer_menu",
+    ),
+
+    # お客様の注文登録処理
+    path(
+        "order/<int:store_id>/<int:table_no>/submit",
+        views.customer_order_submit,
+        name="customer_order_submit",
     ),
 ]
