@@ -1,0 +1,278 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>発注管理</title>
+
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        /* ナビバー */
+        .custom-navbar {
+            background-color: #212529;
+            padding: 18px 0;
+            z-index: 1030;
+            position: relative;
+        }
+
+        .system-name {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .user-icon {
+            position: absolute;
+            top: 50%;
+            right: 30px;
+            transform: translateY(-50%);
+            color: white !important;
+            font-size: 22px;
+            text-decoration: none !important;
+            z-index: 9999;
+        }
+
+        .user-icon:hover {
+            color: #cccccc !important;
+        }
+
+        /* メイン部分 */
+        .order-main {
+            padding-top: 100px;
+            padding-bottom: 50px;
+        }
+
+        /* タイトル */
+        .order-title {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .order-title h1 {
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .order-title p {
+            color: #777;
+        }
+
+        /* テーブル */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .order-table {
+            width: 100%;
+            min-width: 850px;
+            margin-bottom: 0;
+            border-collapse: collapse;
+            text-align: center;
+        }
+
+        .order-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            white-space: nowrap;
+            padding: 16px 12px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .order-table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid #dee2e6;
+            vertical-align: middle;
+        }
+
+        .order-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .order-table tbody tr:hover {
+            background-color: #fffaf0;
+        }
+
+        /* 発注がない場合 */
+        .no-orders {
+            padding: 40px 12px !important;
+            color: #777;
+            text-align: center;
+        }
+
+        /* 詳細ボタン */
+        .detail-button {
+            display: inline-block;
+            padding: 7px 16px;
+            border: 1px solid #212529;
+            border-radius: 5px;
+            background-color: #212529;
+            color: white;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: background-color 0.2s;
+        }
+
+        .detail-button:hover {
+            background-color: #424649;
+            color: white;
+            text-decoration: none;
+        }
+
+        /* 戻るボタン */
+        .back-button {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 10px 20px;
+            background-color: #212529;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+
+        .back-button:hover {
+            background-color: #343a40;
+            color: white;
+        }
+
+        .back-area {
+            text-align: center;
+        }
+
+        /* スマートフォン */
+        @media (max-width: 576px) {
+            .system-name {
+                font-size: 15px;
+                padding-right: 35px;
+            }
+
+            .order-main {
+                padding-top: 90px;
+            }
+
+            .order-title h1 {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ナビバー -->
+    <nav class="custom-navbar fixed-top">
+        <div class="container">
+            <span class="system-name">
+                注文連携型 在庫管理・発注支援システム
+            </span>
+        </div>
+    </nav>
+
+    <!-- メイン -->
+    <main class="order-main">
+        <div class="container">
+
+            <!-- タイトル -->
+            <div class="order-title">
+                <h1>発注管理</h1>
+                <p>発注情報の一覧を確認できます</p>
+            </div>
+
+            <!-- 発注一覧テーブル -->
+            <div class="table-container">
+                <table class="order-table">
+                    <thead>
+                        <tr>
+                            <th>発注ID</th>
+                            <th>店舗</th>
+                            <th>店長</th>
+                            <th>発注日時</th>
+                            <th>品目数</th>
+                            <th>詳細</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <!-- サンプルデータ：新しい発注が上 -->
+                        <tr>
+                            <td>PO003</td>
+                            <td>川越店</td>
+                            <td>鈴木 一郎</td>
+                            <td>2026/10/14 14:00</td>
+                            <td>5</td>
+                            <td>
+                                <a href="{% url 'order_detail' %}"
+                                   class="detail-button">
+                                    詳細
+                                </a>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>PO002</td>
+                            <td>浦和店</td>
+                            <td>佐藤 花子</td>
+                            <td>2026/10/14 11:15</td>
+                            <td>3</td>
+                            <td>
+                                <a href="{% url 'order_detail' %}"
+                                   class="detail-button">
+                                    詳細
+                                </a>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>PO001</td>
+                            <td>大宮店</td>
+                            <td>山田 太郎</td>
+                            <td>2026/10/14 10:30</td>
+                            <td>2</td>
+                            <td>
+                                <a href="{% url 'order_detail' %}"
+                                   class="detail-button">
+                                    詳細
+                                </a>
+                            </td>
+                        </tr>
+
+                        <!--
+                        発注がない場合は、上の3件を削除して
+                        次の行を使用する
+
+                        <tr>
+                            <td colspan="6" class="no-orders">
+                                発注はありません
+                            </td>
+                        </tr>
+                        -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 発注画面に戻る -->
+            <div class="back-area">
+                <a href="{% url 'order_menu' %}"
+                   class="back-button">
+                    発注画面に戻る
+                </a>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="{% static 'js/scripts.js' %}"></script>
+
+</body>
+</html>

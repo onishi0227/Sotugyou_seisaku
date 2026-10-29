@@ -166,6 +166,7 @@ class AccountRegistrationTests(TestCase):
         self.assertEqual(profile.store_code, "STORE001")
 
 
+
 class LoginTests(TestCase):
     """ログイン処理のテスト。"""
 
@@ -175,8 +176,18 @@ class LoginTests(TestCase):
             password=TEST_PASSWORD,
         )
 
+        EmployeeProfile.objects.create(
+            user=self.user,
+            role=EmployeeProfile.Role.STAFF,
+            full_name="ログインテスト社員",
+            store_code="STORE001",
+        )
+
     def test_login_success(self):
         """正しい社員IDとパスワードでログインできる。"""
+
+        # 実際の画面と同じように、先に店舗ログインを選択する
+        self.client.get(reverse("select_store_portal"))
 
         response = self.client.post(
             reverse("login"),
@@ -186,12 +197,32 @@ class LoginTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("login_success"))
+        self.assertRedirects(response, reverse("store_top"))
 
-        response = self.client.get(reverse("login_success"))
+        # ログイン後、店舗トップ画面を表示できることを確認する
+        response = self.client.get(reverse("store_top"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "ログインに成功しました")
+
+    def test_login_failure(self):
+        """間違ったパスワードではログインできない。"""
+
+        self.client.get(reverse("select_store_portal"))
+
+        response = self.client.post(
+            reverse("login"),
+            {
+                "employee_id": "employee_login",
+                "password": "WrongPassword_123!",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "社員IDまたはパスワードが正しくありません。",
+        )
+
 
     def test_login_failure(self):
         """間違ったパスワードではログインできない。"""
@@ -224,10 +255,10 @@ class LogoutTests(TestCase):
     def test_logout_success(self):
         """ログアウト後はログイン状態が解除される。"""
 
+        # ログアウト後はログイン画面へ遷移する
         response = self.client.post(reverse("logout"))
-
         self.assertRedirects(response, reverse("login"))
 
+        # ログイン成功画面へ再アクセスすると、入口画面へ戻る
         response = self.client.get(reverse("login_success"))
-
-        self.assertRedirects(response, reverse("login"))
+        self.assertRedirects(response, reverse("entry"))

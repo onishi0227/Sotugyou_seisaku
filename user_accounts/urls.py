@@ -1,10 +1,11 @@
+
 from django.urls import path
 
 from . import views
 
 
 urlpatterns = [
-    # S-00 入口
+    # 入口
     path("", views.entry_view, name="entry"),
     path("staff", views.entry_view, name="staff_entry"),
 
@@ -34,68 +35,88 @@ urlpatterns = [
     ),
     path("logout", views.logout_view, name="logout"),
 
-    # S-08 店舗トップ画面
+    # 店舗トップ・在庫一覧・棚卸
     path(
         "store/top",
         views.store_top,
         name="store_top",
     ),
-
-    # S-11 在庫一覧画面
     path(
         "store/inventory",
         views.inventory_list,
         name="inventory_list",
     ),
-
-    # S-12 棚卸登録画面
     path(
         "store/stocktake",
         views.stocktake_register,
         name="stocktake_register",
     ),
-
-    # S-12 棚卸登録完了画面
     path(
         "store/stocktake/complete",
         views.stocktake_complete,
         name="stocktake_complete",
     ),
 
-    # S-13 在庫切れ予測画面（店長専用）
+    # 在庫切れ予測・発注登録
     path(
         "store/stockout-prediction",
         views.stockout_prediction,
         name="stockout_prediction",
     ),
-
-    # 選択した食材の発注登録画面
     path(
         "store/stockout-prediction/order-registration",
         views.stockout_order_registration,
         name="stockout_order_registration",
     ),
     path(
+        "store/purchase-management",
+        views.purchase_management,
+        name="purchase_management",
+    ),
+    path(
         "store/order-registration",
         views.stockout_order_registration_page,
         name="stockout_order_registration_page",
     ),
+    path(
+        "store/order-registration/submit",
+        views.stockout_order_submit,
+        name="stockout_order_submit",
+    ),
+    path(
+        "store/order-registration/complete",
+        views.stockout_order_complete,
+        name="stockout_order_complete",
+    ),
 
-    # S-16 本社管理者トップ画面
+    # 店長用・発注履歴／修正／取消
+    path(
+        "store/order-history",
+        views.order_history,
+        name="order_history",
+    ),
+    path(
+        "store/order-history/<int:request_id>/edit",
+        views.purchase_request_edit,
+        name="purchase_request_edit",
+    ),
+    path(
+        "store/order-history/<int:request_id>/cancel",
+        views.purchase_request_cancel,
+        name="purchase_request_cancel",
+    ),
+
+    # 本社管理者
     path(
         "headquarters/top",
         views.headquarters_top,
         name="headquarters_top",
     ),
-
-    # S-21 本社マスタ管理画面
     path(
         "headquarters/master",
         views.headquarters_master,
         name="headquarters_master",
     ),
-
-    # 本社マスタ登録画面
     path(
         "headquarters/master/ingredients",
         views.ingredient_register,
@@ -112,21 +133,39 @@ urlpatterns = [
         name="recipe_register",
     ),
 
+    # 本社側・発注管理
+    path(
+        "headquarters/orders",
+        views.order,
+        name="order",
+    ),
+    path(
+        "headquarters/orders/<int:request_id>",
+        views.order_detail,
+        name="order_detail",
+    ),
+    path(
+        "headquarters/orders/complete",
+        views.order_complete,
+        name="order_complete",
+    ),
+    path(
+        "headquarters/orders/history",
+        views.order_history2,
+        name="order_history2",
+    ),
+
     # QRコードから開くお客様用画面
     path(
         "order/<int:store_id>/<int:table_no>",
         views.customer_order,
         name="customer_order",
     ),
-
-    # お客様用の商品一覧画面
     path(
         "order/<int:store_id>/<int:table_no>/menu",
         views.customer_menu,
         name="customer_menu",
     ),
-
-    # お客様の注文登録処理
     path(
         "order/<int:store_id>/<int:table_no>/submit",
         views.customer_order_submit,

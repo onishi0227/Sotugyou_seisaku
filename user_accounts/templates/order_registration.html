@@ -1,0 +1,386 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>発注登録</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Noto Sans JP", sans-serif;
+            background-color: #ffffff;
+            color: #212529;
+        }
+
+        /* ヘッダー */
+        .navbar {
+            background-color: #212529;
+            color: #ffffff;
+            padding: 18px 30px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* メイン */
+        .container {
+            width: 95%;
+            max-width: 1300px;
+            margin: 125px auto 40px;
+            padding: 0 5px;
+        }
+
+        /* タイトル */
+        .page-title {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .page-title h1 {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 0 0 18px;
+        }
+
+        .page-title p {
+            color: #777777;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        /* 発注内容 */
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 30px 0 14px;
+        }
+
+        .notice {
+            color: #777777;
+            font-size: 12px;
+            margin: 0 0 12px;
+        }
+
+        /* テーブル */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+        }
+
+        table {
+            width: 100%;
+            min-width: 680px;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background-color: #212529;
+            color: #ffffff;
+        }
+
+        th,
+        td {
+            padding: 14px 12px;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        th {
+            font-size: 14px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        td {
+            font-size: 14px;
+            height: 53px;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* 発注数量入力欄 */
+        .quantity-input {
+            width: 125px;
+            max-width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            background-color: #ffffff;
+            font-family: inherit;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .quantity-input:focus {
+            outline: none;
+            border-color: #6c757d;
+            box-shadow: 0 0 0 2px rgba(108, 117, 125, 0.15);
+        }
+
+        /* 本社へのメモ */
+        .note-area {
+            margin-top: 22px;
+        }
+
+        .note-area label {
+            display: block;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .note-area textarea {
+            display: block;
+            width: 100%;
+            min-height: 85px;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        .note-area textarea:focus {
+            outline: none;
+            border-color: #6c757d;
+        }
+
+        .note-help {
+            color: #777777;
+            font-size: 12px;
+            margin-top: 6px;
+        }
+
+        /* エラーメッセージ */
+        .error-message {
+            color: #dc3545;
+            font-size: 14px;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        /* ボタン */
+        .button-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 13px;
+            margin: 25px 0 40px;
+        }
+
+        .action-button {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 40px;
+            padding: 11px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #212529;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .action-button:hover {
+            background-color: #343a40;
+            color: #ffffff;
+        }
+
+        .submit-button:disabled {
+            background-color: #999999;
+            cursor: not-allowed;
+        }
+
+        /* データがない場合 */
+        .empty-message {
+            padding: 28px 12px;
+            color: #777777;
+            text-align: center;
+        }
+
+        /* スマートフォン */
+        @media (max-width: 600px) {
+            .navbar {
+                padding: 16px 15px;
+                font-size: 16px;
+            }
+
+            .container {
+                width: 94%;
+                margin-top: 70px;
+            }
+
+            .page-title h1 {
+                font-size: 24px;
+            }
+
+            .section-title {
+                font-size: 18px;
+            }
+
+            th,
+            td {
+                padding: 11px 8px;
+            }
+
+            .button-area {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .action-button {
+                width: 100%;
+                min-height: 44px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ヘッダー -->
+    <header class="navbar">
+        注文連携型 在庫管理・発注支援システム
+    </header>
+
+    <!-- メイン -->
+    <main class="container">
+
+        <!-- タイトル -->
+        <div class="page-title">
+            <h1>発注登録</h1>
+            <p>発注内容を確認し、発注数を入力してください。</p>
+        </div>
+
+        <section>
+            <h2 class="section-title">発注内容</h2>
+
+            <p class="notice">
+                ※ 発注する食品と数量を確認してから申請してください。
+            </p>
+
+            {% if error_message %}
+                <p class="error-message">{{ error_message }}</p>
+            {% endif %}
+
+            {% if errors %}
+                <div class="error-message">
+                    {% for error in errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form
+                method="post"
+                action="{% if editing_purchase_request %}{% url 'purchase_request_edit' editing_purchase_request.pk %}{% else %}{% url 'stockout_order_submit' %}{% endif %}"
+            >
+                {% csrf_token %}
+
+                <!-- 発注内容一覧 -->
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>食品名</th>
+                                <th>実在庫数</th>
+                                <th>推奨発注数</th>
+                                <th>発注数</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for item in selected_items %}
+                                <tr>
+                                    <td>
+                                        {% firstof item.ingredient_name item.name item.ingredient.name %}
+                                    </td>
+
+                                    <td>
+                                        {% firstof item.actual_stock_display item.actual_stock "—" %}
+                                    </td>
+
+                                    <td>
+                                        {% firstof item.recommended_quantity_display item.recommended_quantity_raw item.recommended_quantity "—" %}
+                                    </td>
+
+                                    <td>
+                                        <input
+                                            type="number"
+                                            class="quantity-input"
+                                            name="order_quantity_{{ item.ingredient_id }}"
+                                            min="0.01"
+                                            step="any"
+                                            value="{% firstof item.order_quantity item.recommended_quantity_raw item.recommended_quantity %}"
+                                            placeholder="発注数を入力"
+                                            aria-label="{% firstof item.ingredient_name item.name item.ingredient.name %}の発注数"
+                                            required
+                                        >
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="empty-message">
+                                        発注する食品が選択されていません。
+                                        在庫切れ予測画面から食品を選択してください。
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+
+
+                <!-- ボタン -->
+                <div class="button-area">
+
+                    <a
+                        href="{% url 'purchase_management' %}"
+                        class="action-button"
+                    >
+                        発注管理画面に戻る
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="action-button submit-button"
+                        {% if not selected_items %}disabled{% endif %}
+                    >
+                        {% if editing_purchase_request %}
+                            発注内容を再申請する
+                        {% else %}
+                            発注申請する
+                        {% endif %}
+                    </button>
+
+                </div>
+            </form>
+        </section>
+    </main>
+
+</body>
+</html>

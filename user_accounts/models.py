@@ -348,7 +348,110 @@ class OrderDetail(models.Model):
         ordering = ["order_id", "id"]
 
     def __str__(self):
+        return f"{self.menu_item.name} "
+
+
+class PurchaseRequest(models.Model):
+    """店舗から本社への発注申請を保存する。"""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "未確認"
+        REJECTED = "rejected", "差し戻し"
+        APPROVED = "approved", "確定"
+        CANCELLED = "cancelled", "取消"
+
+    store_code = models.CharField(
+        max_length=30,
+        db_index=True,
+        verbose_name="店舗コード",
+    )
+    requested_by = models.ForeignKey(
+        EmployeeProfile,
+        on_delete=models.PROTECT,
+        related_name="purchase_requests",
+        verbose_name="申請者",
+    )
+    requested_at = models.DateTimeField(
+        default=timezone.now,
+        db_index=True,
+        verbose_name="申請日時",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+        verbose_name="申請状態",
+    )
+    note = models.TextField(
+        blank=True,
+        verbose_name="本社へのメモ",
+    )
+    headquarters_comment = models.TextField(
+        blank=True,
+        verbose_name="本社コメント",
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="作成日時",
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="更新日時",
+    )
+
+    class Meta:
+        verbose_name = "発注申請"
+        verbose_name_plural = "発注申請"
+        ordering = ["-requested_at", "-id"]
+
+    def __str__(self):
+        return f"発注申請 #{self.pk} - {self.store_code}"
+
+
+class PurchaseRequestDetail(models.Model):
+    """発注申請に含まれる食材と申請数量を保存する。"""
+
+    purchase_request = models.ForeignKey(
+        PurchaseRequest,
+        on_delete=models.CASCADE,
+        related_name="details",
+        verbose_name="発注申請",
+    )
+    ingredient = models.ForeignKey(
+        Ingredient,
+        on_delete=models.PROTECT,
+        related_name="purchase_request_details",
+        verbose_name="食材",
+    )
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(0.01)],
+        verbose_name="申請数量",
+    )
+    recommended_quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        verbose_name="申請時推奨数量",
+    )
+
+    class Meta:
+        verbose_name = "発注申請明細"
+        verbose_name_plural = "発注申請明細"
+        ordering = ["purchase_request_id", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["purchase_request", "ingredient"],
+                name="unique_purchase_request_ingredient",
+            ),
+        ]
+
+    def __str__(self):
         return (
-            f"{self.menu_item.name} "
-            f"× {self.quantity}"
+            f"{self.ingredient.name} "
+            f"{self.quantity}{self.ingredient.unit}"
         )

@@ -1,0 +1,279 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>発注履歴</title>
+
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        /* order.html と共通のナビバー */
+        .custom-navbar {
+            background-color: #212529;
+            padding: 18px 0;
+            z-index: 1030;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        .system-name {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .user-icon {
+            position: absolute;
+            top: 50%;
+            right: 30px;
+            transform: translateY(-50%);
+            color: white !important;
+            font-size: 22px;
+            text-decoration: none !important;
+            z-index: 9999;
+        }
+
+        .user-icon:hover {
+            color: #cccccc !important;
+        }
+
+        /* メイン部分 */
+        .history-main {
+            padding-top: 110px;
+            padding-bottom: 50px;
+        }
+
+        .history-container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        /* タイトル */
+        .history-title {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .history-title h1 {
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #212529;
+        }
+
+        .history-title p {
+            color: #777;
+        }
+
+        /* テーブル */
+        .history-table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .history-table {
+            width: 100%;
+            min-width: 1000px;
+            margin-bottom: 0;
+            border-collapse: collapse;
+            text-align: center;
+        }
+
+        .history-table th {
+            background-color: #f8f9fa;
+            color: #333;
+            font-weight: bold;
+            white-space: nowrap;
+            padding: 16px 14px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .history-table td {
+            padding: 16px 14px;
+            border-bottom: 1px solid #dee2e6;
+            vertical-align: middle;
+            color: #444;
+        }
+
+        .history-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .history-table tbody tr:hover {
+            background-color: #fffaf0;
+        }
+
+        .memo-cell {
+            min-width: 220px;
+            text-align: left !important;
+            white-space: normal;
+        }
+
+        /* 発注履歴がない場合 */
+        .no-history {
+            padding: 40px 12px !important;
+            color: #777;
+            text-align: center;
+        }
+
+        /* 戻るボタン */
+        .back-area {
+            text-align: center;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 10px 20px;
+            background-color: #212529;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .back-button:hover {
+            background-color: #343a40;
+            color: white;
+        }
+
+        /* スマートフォン */
+        @media (max-width: 576px) {
+            .system-name {
+                font-size: 15px;
+                padding-right: 35px;
+            }
+
+            .user-icon {
+                right: 15px;
+                font-size: 20px;
+            }
+
+            .history-main {
+                padding-top: 95px;
+            }
+
+            .history-title h1 {
+                font-size: 26px;
+            }
+
+            .history-container {
+                padding: 0 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- order.html と共通のナビバー -->
+    <nav class="custom-navbar">
+        <div class="container">
+            <span class="system-name">
+                注文連携型 在庫管理・発注支援システム
+            </span>
+
+        </div>
+    </nav>
+
+    <!-- メイン -->
+    <main class="history-main">
+        <div class="history-container">
+
+            <!-- タイトル -->
+            <div class="history-title">
+                <h1>発注履歴</h1>
+                <p>各店舗からの発注履歴を確認できます</p>
+            </div>
+
+            <!-- 発注履歴テーブル -->
+            <div class="history-table-wrapper">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>店舗</th>
+                            <th>店長</th>
+                            <th>発注日時</th>
+                            <th>食材</th>
+                            <th>推奨数</th>
+                            <th>発注数</th>
+                            <th>店舗からのメモ</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <tr>
+                            <td>大宮店</td>
+                            <td>山田 太郎</td>
+                            <td>2026/10/15 10:30</td>
+                            <td>玉ねぎ</td>
+                            <td>20個</td>
+                            <td>25個</td>
+                            <td class="memo-cell">
+                                週末の予約が多いため、追加で発注します。
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>浦和店</td>
+                            <td>佐藤 花子</td>
+                            <td>2026/10/15 11:15</td>
+                            <td>じゃがいも</td>
+                            <td>30個</td>
+                            <td>30個</td>
+                            <td class="memo-cell">
+                                通常どおりの発注です。
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>川越店</td>
+                            <td>鈴木 一郎</td>
+                            <td>2026/10/15 13:00</td>
+                            <td>にんじん</td>
+                            <td>15本</td>
+                            <td>10本</td>
+                            <td class="memo-cell">
+                                在庫が残っているため、発注数を減らしました。
+                            </td>
+                        </tr>
+
+                        <!-- 履歴がない場合はこちらを使用
+                        <tr>
+                            <td colspan="7" class="no-history">
+                                発注履歴はありません
+                            </td>
+                        </tr>
+                        -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 発注画面に戻る -->
+            <div class="back-area">
+                <a href="{% url 'order_menu' %}" class="back-button">
+                    発注画面に戻る
+                </a>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="{% static 'js/scripts.js' %}"></script>
+
+</body>
+</html>

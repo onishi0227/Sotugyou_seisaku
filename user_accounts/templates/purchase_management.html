@@ -1,0 +1,188 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>発注管理</title>
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Noto Sans JP", sans-serif;
+            background-color: #fff;
+            color: #212529;
+        }
+
+        .navbar {
+            background-color: #212529;
+            color: white;
+            padding: 18px 30px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: 100px auto 50px;
+            padding: 0 20px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 30px;
+        }
+
+        .subtitle {
+            margin-bottom: 38px;
+            text-align: center;
+            color: #777;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 25px;
+        }
+
+        .menu-card {
+            display: block;
+            min-height: 175px;
+            padding: 28px 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 2px 7px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            text-decoration: none;
+            color: #212529;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+
+        .menu-card:hover {
+            background-color: #f8f9fa;
+            transform: translateY(-2px);
+            color: #212529;
+        }
+
+        .menu-card i {
+            display: block;
+            margin-bottom: 18px;
+            font-size: 40px;
+        }
+
+        .menu-card h2 {
+            margin: 0 0 14px;
+            font-size: 19px;
+        }
+
+        .menu-card p {
+            margin: 0;
+            color: #777;
+            font-size: 14px;
+        }
+
+        .button-area {
+            display: flex;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .back-button {
+            display: inline-block;
+            padding: 12px 22px;
+            border-radius: 6px;
+            background-color: #212529;
+            color: white;
+            text-decoration: none;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .back-button:hover {
+            background-color: #343a40;
+        }
+
+        @media (max-width: 600px) {
+            .navbar {
+                padding: 16px 20px;
+                font-size: 17px;
+            }
+
+            .container {
+                margin-top: 55px;
+            }
+
+            h1 {
+                font-size: 25px;
+            }
+
+            .menu-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .menu-card {
+                min-height: 155px;
+            }
+
+            .back-button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="navbar">
+        注文連携型 在庫管理・発注支援システム
+    </header>
+
+    <main class="container">
+        <h1>発注管理</h1>
+
+        <p class="subtitle">
+            操作する項目を選択してください
+        </p>
+
+        <div class="menu-grid">
+            <a
+                href="{% url 'stockout_order_registration_page' %}"
+                class="menu-card"
+            >
+                <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+                <h2>発注</h2>
+                <p>発注する食材と数量を確認します</p>
+            </a>
+
+            <a
+                href="{% url 'order_history' %}"
+                class="menu-card"
+            >
+                <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+                <h2>発注履歴</h2>
+                <p>過去の発注内容を確認します</p>
+            </a>
+        </div>
+
+        <div class="button-area">
+            <a
+                href="{% url 'store_top' %}"
+                class="back-button"
+            >
+                店舗管理者用画面に戻る
+            </a>
+        </div>
+    </main>
+</body>
+</html>
