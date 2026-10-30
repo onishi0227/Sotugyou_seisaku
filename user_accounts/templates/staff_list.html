@@ -1,0 +1,204 @@
+
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>店員アカウント一覧</title>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Meiryo", sans-serif;
+            background-color: white;
+            color: #333;
+        }
+
+        .navbar {
+            background-color: #212529;
+            color: white;
+            padding: 20px 30px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        h2 { margin-bottom: 25px; }
+
+        .table-container {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 16px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th { background-color: #e9ecef; }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border: 1px solid #212529;
+            border-radius: 5px;
+            background-color: #212529;
+            color: white;
+            text-decoration: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .btn:hover, .back-btn:hover {
+            opacity: 0.85;
+        }
+
+        .delete-form {
+            display: inline;
+        }
+
+        .back-button-area {
+            text-align: center;
+            margin-top: 25px;
+        }
+
+        .back-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #212529;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .message {
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            background-color: #e9ecef;
+        }
+
+        .empty-message {
+            padding: 20px;
+            text-align: center;
+        }
+
+        @media (max-width: 576px) {
+            .navbar {
+                padding: 18px 15px;
+                font-size: 16px;
+            }
+
+            .container {
+                margin-top: 25px;
+                padding: 0 12px;
+            }
+
+            .table-container { padding: 12px; }
+
+            th, td {
+                padding: 12px 8px;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="navbar">
+        在庫管理・発注支援システム
+    </div>
+
+    <div class="container">
+
+        <h2>店員アカウント一覧</h2>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>社員ID</th>
+                        <th>店員名</th>
+                        <th>変更</th>
+                        <th>削除</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for staff in staff_members %}
+                        <tr>
+                            <td>{{ staff.user.username }}</td>
+                            <td>{{ staff.full_name|default:"未登録" }}</td>
+
+                            <td>
+                                <a
+                                    href="{% url 'staff_edit' staff.user.username %}"
+                                    class="btn">
+                                    変更
+                                </a>
+                            </td>
+
+                            <td>
+                                <form
+                                    method="post"
+                                    action="{% url 'staff_delete' staff.user.username %}"
+                                    class="delete-form"
+                                    onsubmit="return confirm('社員ID：{{ staff.user.username|escapejs }}\n店員名：{{ staff.full_name|escapejs }}\n\nこのアカウントを削除してもよろしいですか？');">
+
+                                    {% csrf_token %}
+
+                                    <button type="submit" class="btn">
+                                        削除
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" class="empty-message">
+                                登録されている店員はいません。
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="back-button-area">
+            <a href="{% url 'staff_management' %}" class="back-btn">
+                店員管理画面に戻る
+            </a>
+        </div>
+
+    </div>
+
+</body>
+</html>

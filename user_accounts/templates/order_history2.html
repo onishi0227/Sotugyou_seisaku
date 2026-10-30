@@ -1,3 +1,4 @@
+```html
 {% load static %}
 
 <!DOCTYPE html>
@@ -14,7 +15,7 @@
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
     <style>
-        /* order.html と共通のナビバー */
+        /* ナビバー */
         .custom-navbar {
             background-color: #212529;
             padding: 18px 0;
@@ -31,21 +32,6 @@
             font-weight: bold;
         }
 
-        .user-icon {
-            position: absolute;
-            top: 50%;
-            right: 30px;
-            transform: translateY(-50%);
-            color: white !important;
-            font-size: 22px;
-            text-decoration: none !important;
-            z-index: 9999;
-        }
-
-        .user-icon:hover {
-            color: #cccccc !important;
-        }
-
         /* メイン部分 */
         .history-main {
             padding-top: 110px;
@@ -54,7 +40,7 @@
 
         .history-container {
             width: 100%;
-            max-width: 1400px;
+            max-width: 1500px;
             margin: 0 auto;
             padding: 0 15px;
         }
@@ -87,7 +73,7 @@
 
         .history-table {
             width: 100%;
-            min-width: 1000px;
+            min-width: 1200px;
             margin-bottom: 0;
             border-collapse: collapse;
             text-align: center;
@@ -120,7 +106,41 @@
         .memo-cell {
             min-width: 220px;
             text-align: left !important;
-            white-space: normal;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .comment-cell {
+            min-width: 200px;
+            text-align: left !important;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        /* ステータス */
+        .status-badge {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 5px;
+            background-color: #e9ecef;
+            white-space: nowrap;
+            font-weight: bold;
+        }
+
+        /* 詳細ボタン */
+        .detail-button {
+            display: inline-block;
+            padding: 7px 14px;
+            border-radius: 5px;
+            background-color: #212529;
+            color: white;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .detail-button:hover {
+            background-color: #424649;
+            color: white;
         }
 
         /* 発注履歴がない場合 */
@@ -158,11 +178,6 @@
                 padding-right: 35px;
             }
 
-            .user-icon {
-                right: 15px;
-                font-size: 20px;
-            }
-
             .history-main {
                 padding-top: 95px;
             }
@@ -180,13 +195,12 @@
 
 <body>
 
-    <!-- order.html と共通のナビバー -->
+    <!-- ナビバー -->
     <nav class="custom-navbar">
         <div class="container">
             <span class="system-name">
                 注文連携型 在庫管理・発注支援システム
             </span>
-
         </div>
     </nav>
 
@@ -197,7 +211,7 @@
             <!-- タイトル -->
             <div class="history-title">
                 <h1>発注履歴</h1>
-                <p>各店舗からの発注履歴を確認できます</p>
+                <p>各店舗からの発注履歴と本社での処理状況を確認できます</p>
             </div>
 
             <!-- 発注履歴テーブル -->
@@ -205,6 +219,7 @@
                 <table class="history-table">
                     <thead>
                         <tr>
+                            <th>発注ID</th>
                             <th>店舗</th>
                             <th>店長</th>
                             <th>発注日時</th>
@@ -212,61 +227,109 @@
                             <th>推奨数</th>
                             <th>発注数</th>
                             <th>店舗からのメモ</th>
+                            <th>処理状態</th>
+                            <th>差し戻し理由</th>
+                            <th>詳細</th>
                         </tr>
                     </thead>
 
                     <tbody>
-                        <tr>
-                            <td>大宮店</td>
-                            <td>山田 太郎</td>
-                            <td>2026/10/15 10:30</td>
-                            <td>玉ねぎ</td>
-                            <td>20個</td>
-                            <td>25個</td>
-                            <td class="memo-cell">
-                                週末の予約が多いため、追加で発注します。
-                            </td>
-                        </tr>
+                        {% for purchase_request in purchase_requests %}
 
-                        <tr>
-                            <td>浦和店</td>
-                            <td>佐藤 花子</td>
-                            <td>2026/10/15 11:15</td>
-                            <td>じゃがいも</td>
-                            <td>30個</td>
-                            <td>30個</td>
-                            <td class="memo-cell">
-                                通常どおりの発注です。
-                            </td>
-                        </tr>
+                            {% for detail in purchase_request.details.all %}
+                            <tr>
+                                <td>{{ purchase_request.pk }}</td>
 
-                        <tr>
-                            <td>川越店</td>
-                            <td>鈴木 一郎</td>
-                            <td>2026/10/15 13:00</td>
-                            <td>にんじん</td>
-                            <td>15本</td>
-                            <td>10本</td>
-                            <td class="memo-cell">
-                                在庫が残っているため、発注数を減らしました。
-                            </td>
-                        </tr>
+                                <td>
+                                    {{ purchase_request.store_code }}
+                                </td>
 
-                        <!-- 履歴がない場合はこちらを使用
+                                <td>
+                                    {{ purchase_request.requested_by.user.username }}
+                                </td>
+
+                                <td>
+                                    {{ purchase_request.requested_at|date:"Y/m/d H:i" }}
+                                </td>
+
+                                <td>
+                                    {{ detail.ingredient.name }}
+                                </td>
+
+                                <td>
+                                    {{ detail.recommended_quantity }}
+                                </td>
+
+                                <td>
+                                    {{ detail.quantity }}
+                                </td>
+
+                                <td class="memo-cell">
+                                    {{ purchase_request.note|default:"メモはありません" }}
+                                </td>
+
+                                <td>
+                                    <span class="status-badge">
+                                        {{ purchase_request.get_status_display }}
+                                    </span>
+                                </td>
+
+                                <td class="comment-cell">
+                                    {{ purchase_request.headquarters_comment|default:"—" }}
+                                </td>
+
+                                <td>
+                                    <a href="{% url 'order_detail' request_id=purchase_request.pk %}"
+                                       class="detail-button">
+                                        詳細
+                                    </a>
+                                </td>
+                            </tr>
+
+                            {% endfor %}
+
+                            {% if not purchase_request.details.all %}
+                            <tr>
+                                <td>{{ purchase_request.pk }}</td>
+                                <td>{{ purchase_request.store_code }}</td>
+                                <td>{{ purchase_request.requested_by.user.username }}</td>
+                                <td>{{ purchase_request.requested_at|date:"Y/m/d H:i" }}</td>
+                                <td colspan="3">発注明細はありません</td>
+                                <td class="memo-cell">
+                                    {{ purchase_request.note|default:"メモはありません" }}
+                                </td>
+                                <td>
+                                    <span class="status-badge">
+                                        {{ purchase_request.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="comment-cell">
+                                    {{ purchase_request.headquarters_comment|default:"—" }}
+                                </td>
+                                <td>
+                                    <a href="{% url 'order_detail' request_id=purchase_request.pk %}"
+                                       class="detail-button">
+                                        詳細
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endif %}
+
+                        {% empty %}
                         <tr>
-                            <td colspan="7" class="no-history">
+                            <td colspan="11" class="no-history">
                                 発注履歴はありません
                             </td>
                         </tr>
-                        -->
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
 
-            <!-- 発注画面に戻る -->
+            <!-- 発注管理画面に戻る -->
             <div class="back-area">
-                <a href="{% url 'order_menu' %}" class="back-button">
-                    発注画面に戻る
+                <a href="{% url 'order' %}" class="back-button">
+                    発注管理画面に戻る
                 </a>
             </div>
 
@@ -277,3 +340,4 @@
 
 </body>
 </html>
+```

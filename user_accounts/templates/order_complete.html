@@ -1,10 +1,15 @@
+```html
+{% load static %}
 
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>発注完了 - 在庫管理システム</title>
+
+    <title>発注処理完了 - 在庫管理システム</title>
+
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
 
     <style>
         * {
@@ -18,7 +23,6 @@
             color: #212529;
         }
 
-        /* ナビゲーションバー */
         .navbar {
             background-color: #212529;
             color: white;
@@ -27,14 +31,12 @@
             font-weight: bold;
         }
 
-        /* メインコンテンツ */
         .container {
             max-width: 850px;
             margin: 50px auto;
             padding: 0 20px;
         }
 
-        /* 発注完了パネル */
         .complete-panel {
             background-color: white;
             padding: 35px;
@@ -43,7 +45,6 @@
             text-align: center;
         }
 
-        /* 完了アイコン */
         .complete-icon {
             width: 70px;
             height: 70px;
@@ -54,6 +55,11 @@
             font-size: 42px;
             line-height: 70px;
             font-weight: bold;
+        }
+
+        .complete-icon.rejected {
+            background-color: #f8d7da;
+            color: #b02a37;
         }
 
         h1 {
@@ -68,7 +74,10 @@
             margin-bottom: 30px;
         }
 
-        /* 発注内容 */
+        .complete-message.rejected {
+            color: #b02a37;
+        }
+
         .order-details {
             text-align: left;
             border: 1px solid #dee2e6;
@@ -81,6 +90,15 @@
             font-size: 20px;
             margin-top: 0;
             margin-bottom: 18px;
+        }
+
+        .order-info {
+            margin-bottom: 20px;
+        }
+
+        .order-info p {
+            margin: 10px 0;
+            overflow-wrap: anywhere;
         }
 
         .table-wrapper {
@@ -102,16 +120,15 @@
             background-color: #f1f3f5;
         }
 
-        /* 発注日時 */
-        .order-date {
-            margin-top: 22px;
+        .comment {
+            margin-top: 20px;
             padding: 15px;
             background-color: #f8f9fa;
             border-radius: 6px;
-            font-size: 15px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
         }
 
-        /* ボタンエリア */
         .button-area {
             display: flex;
             justify-content: center;
@@ -121,9 +138,7 @@
             margin-top: 30px;
         }
 
-        /* 戻るボタン共通 */
-        .back-button,
-        .store-button {
+        .back-button {
             display: inline-block;
             padding: 13px 25px;
             background-color: #212529;
@@ -135,15 +150,15 @@
             text-align: center;
         }
 
-        .back-button:hover,
-        .store-button:hover {
+        .back-button:hover {
             background-color: #343a40;
+            color: white;
         }
 
-        /* スマートフォン対応 */
         @media (max-width: 600px) {
             .navbar {
                 padding: 16px 20px;
+                font-size: 16px;
             }
 
             .container {
@@ -167,8 +182,7 @@
                 align-items: stretch;
             }
 
-            .back-button,
-            .store-button {
+            .back-button {
                 width: 100%;
             }
         }
@@ -178,80 +192,96 @@
 <body>
 
     <header class="navbar">
-        在庫管理システム
+        注文連携型 在庫管理・発注支援システム
     </header>
 
     <main class="container">
         <section class="complete-panel">
 
-            <div class="complete-icon">✓</div>
-
-            <h1>発注完了</h1>
-
-            <p class="complete-message">
-                発注が完了しました！
-            </p>
+            {% if result == "rejected" %}
+                <div class="complete-icon rejected">!</div>
+                <h1>発注処理完了</h1>
+                <p class="complete-message rejected">
+                    {{ message }}
+                </p>
+            {% else %}
+                <div class="complete-icon">✓</div>
+                <h1>発注処理完了</h1>
+                <p class="complete-message">
+                    {{ message }}
+                </p>
+            {% endif %}
 
             <div class="order-details">
                 <h2>発注内容</h2>
+
+                <div class="order-info">
+                    <p>
+                        <strong>発注ID：</strong>
+                        {{ purchase_request.pk }}
+                    </p>
+
+                    <p>
+                        <strong>店舗：</strong>
+                        {{ purchase_request.store_code }}
+                    </p>
+
+                    <p>
+                        <strong>発注日時：</strong>
+                        {{ purchase_request.requested_at|date:"Y/m/d H:i" }}
+                    </p>
+
+                    <p>
+                        <strong>処理状態：</strong>
+                        {{ purchase_request.get_status_display }}
+                    </p>
+                </div>
 
                 <div class="table-wrapper">
                     <table>
                         <thead>
                             <tr>
                                 <th>食材名</th>
+                                <th>推奨数</th>
                                 <th>発注数量</th>
                             </tr>
                         </thead>
 
-                        <tbody id="order-items">
+                        <tbody>
+                            {% for detail in purchase_request.details.all %}
                             <tr>
-                                <td>豚肉</td>
-                                <td>5 kg</td>
+                                <td>{{ detail.ingredient.name }}</td>
+                                <td>{{ detail.recommended_quantity }}</td>
+                                <td>{{ detail.quantity }}</td>
                             </tr>
+                            {% empty %}
                             <tr>
-                                <td>玉ねぎ</td>
-                                <td>10 個</td>
+                                <td colspan="3">
+                                    発注明細はありません。
+                                </td>
                             </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
 
-                <div class="order-date">
-                    <strong>発注日時：</strong>
-                    <span id="order-datetime">読み込み中...</span>
+                {% if purchase_request.headquarters_comment %}
+                <div class="comment">
+                    <strong>差し戻し理由：</strong>
+                    {{ purchase_request.headquarters_comment }}
                 </div>
+                {% endif %}
             </div>
 
-            <!-- 戻るボタン -->
             <div class="button-area">
-
-                <a href="/order/" class="back-button">
+                <a href="{% url 'order' %}" class="back-button">
                     発注管理画面に戻る
                 </a>
-
             </div>
 
         </section>
     </main>
 
-    <script>
-        // 発注日時を表示
-        const now = new Date();
-
-        const formattedDate = new Intl.DateTimeFormat("ja-JP", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: false
-        }).format(now);
-
-        document.getElementById("order-datetime").textContent =
-            formattedDate;
-    </script>
-
 </body>
 </html>
+```

@@ -1,0 +1,356 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>店員アカウント作成</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Meiryo", sans-serif;
+            background-color: white;
+            color: #333;
+        }
+
+        .navbar {
+            background-color: #212529;
+            color: white;
+            padding: 20px 30px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        h2 {
+            margin-bottom: 25px;
+        }
+
+        .form-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        /* 社員ID・氏名・パスワードの入力欄を統一 */
+        input[type="text"],
+        input[type="password"] {
+            display: block;
+            width: 100%;
+            height: 46px;
+            padding: 12px;
+            border: 1px solid #999;
+            border-radius: 5px;
+            font-size: 16px;
+            background-color: white;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #6c757d;
+            box-shadow: 0 0 0 2px rgba(108, 117, 125, 0.15);
+        }
+
+        input[aria-invalid="true"] {
+            border-color: #dc3545;
+        }
+
+        .field-error {
+            display: block;
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 6px;
+        }
+
+        .page-error {
+            color: #dc3545;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .button-area {
+            display: flex;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .create-btn,
+        .back-btn {
+            background-color: #212529;
+        }
+
+        .back-button-area {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            opacity: 0.85;
+        }
+
+        @media (max-width: 600px) {
+            .navbar {
+                padding: 18px 16px;
+                font-size: 18px;
+            }
+
+            .container {
+                margin: 25px auto;
+                padding: 0 14px;
+            }
+
+            .form-container {
+                padding: 20px;
+            }
+
+            .btn {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="navbar">
+        在庫管理・発注支援システム
+    </div>
+
+    <div class="container">
+        <h2>店員アカウント作成</h2>
+
+        <div class="form-container">
+
+            {% if error_message %}
+                <div class="page-error" role="alert">
+                    {{ error_message }}
+                </div>
+            {% endif %}
+
+            <form
+                id="registerForm"
+                method="post"
+                action="{% url 'staff_register2' %}"
+                novalidate
+            >
+                {% csrf_token %}
+
+                <!-- 社員ID -->
+                <div class="form-group">
+                    <label for="employee_id">社員ID</label>
+                    <input
+                        type="text"
+                        id="employee_id"
+                        name="employee_id"
+                        placeholder="社員IDを入力してください"
+                        value="{{ employee_id|default:'' }}"
+                        inputmode="numeric"
+                        aria-describedby="employeeIdError"
+                    >
+                    <span
+                        id="employeeIdError"
+                        class="field-error"
+                        role="alert"
+                        hidden
+                    ></span>
+                </div>
+
+                <!-- 氏名 -->
+                <div class="form-group">
+                    <label for="employee_name">氏名</label>
+                    <input
+                        type="text"
+                        id="employee_name"
+                        name="employee_name"
+                        placeholder="氏名を入力してください"
+                        value="{{ employee_name|default:'' }}"
+                        aria-describedby="employeeNameError"
+                    >
+                    <span
+                        id="employeeNameError"
+                        class="field-error"
+                        role="alert"
+                        hidden
+                    ></span>
+                </div>
+
+                <!-- パスワード -->
+                <div class="form-group">
+                    <label for="password">パスワード</label>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="パスワードを入力してください"
+                        autocomplete="new-password"
+                        aria-describedby="passwordError"
+                    >
+                    <span
+                        id="passwordError"
+                        class="field-error"
+                        role="alert"
+                        hidden
+                    ></span>
+                </div>
+
+                <!-- 作成ボタン -->
+                <div class="button-area">
+                    <button type="submit" class="btn create-btn">
+                        作成
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 戻るボタン -->
+        <div class="back-button-area">
+            <a href="{% url 'staff_management' %}" class="btn back-btn">
+                店員管理画面に戻る
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById("registerForm");
+
+        const employeeId = document.getElementById("employee_id");
+        const employeeName = document.getElementById("employee_name");
+        const password = document.getElementById("password");
+
+        const employeeIdError =
+            document.getElementById("employeeIdError");
+        const employeeNameError =
+            document.getElementById("employeeNameError");
+        const passwordError =
+            document.getElementById("passwordError");
+
+        // エラーメッセージを表示する
+        function showError(input, errorElement, message) {
+            errorElement.textContent = message;
+            errorElement.hidden = false;
+            input.setAttribute("aria-invalid", "true");
+        }
+
+        // エラーメッセージを消す
+        function clearError(input, errorElement) {
+            errorElement.textContent = "";
+            errorElement.hidden = true;
+            input.removeAttribute("aria-invalid");
+        }
+
+        // 社員IDの入力チェック
+        function validateEmployeeId() {
+            clearError(employeeId, employeeIdError);
+
+            if (employeeId.value.trim() === "") {
+                showError(
+                    employeeId,
+                    employeeIdError,
+                    "このフィールドを入力してください"
+                );
+                return false;
+            }
+
+            if (!/^[0-9]+$/.test(employeeId.value.trim())) {
+                showError(
+                    employeeId,
+                    employeeIdError,
+                    "社員IDは半角数字で入力してください"
+                );
+                return false;
+            }
+
+            return true;
+        }
+
+        // 氏名の入力チェック
+        function validateEmployeeName() {
+            clearError(employeeName, employeeNameError);
+
+            if (employeeName.value.trim() === "") {
+                showError(
+                    employeeName,
+                    employeeNameError,
+                    "このフィールドを入力してください"
+                );
+                return false;
+            }
+
+            return true;
+        }
+
+        // パスワードの入力チェック
+        function validatePassword() {
+            clearError(password, passwordError);
+
+            if (password.value === "") {
+                showError(
+                    password,
+                    passwordError,
+                    "パスワードを入力してください"
+                );
+                return false;
+            }
+
+            return true;
+        }
+
+        // 入力中にエラーを再確認する
+        employeeId.addEventListener("input", validateEmployeeId);
+        employeeName.addEventListener("input", validateEmployeeName);
+        password.addEventListener("input", validatePassword);
+
+        // 作成ボタンを押したときのチェック
+        form.addEventListener("submit", function(event) {
+            const idValid = validateEmployeeId();
+            const nameValid = validateEmployeeName();
+            const passwordValid = validatePassword();
+
+            if (!idValid || !nameValid || !passwordValid) {
+                event.preventDefault();
+
+                if (!idValid) {
+                    employeeId.focus();
+                } else if (!nameValid) {
+                    employeeName.focus();
+                } else {
+                    password.focus();
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,125 @@
+
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>店長アカウント変更完了</title>
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Meiryo", sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .navbar {
+            background-color: #212529;
+            color: white;
+            padding: 20px 30px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 80px auto;
+            padding: 0 20px;
+        }
+
+        .complete-card {
+            background-color: white;
+            padding: 50px 30px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .complete-icon {
+            font-size: 60px;
+            color: #198754;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+
+        p {
+            color: #777;
+            margin-bottom: 35px;
+        }
+
+        .back-btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background-color: #212529;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .back-btn:hover {
+            background-color: #343a40;
+        }
+
+        @media (max-width: 576px) {
+            .navbar {
+                padding: 18px 15px;
+                font-size: 16px;
+            }
+
+            .container {
+                margin-top: 40px;
+                padding: 0 12px;
+            }
+
+            .complete-card {
+                padding: 35px 20px;
+            }
+
+            h1 {
+                font-size: 23px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="navbar">
+        在庫管理・発注支援システム
+    </div>
+
+    <div class="container">
+        <div class="complete-card">
+
+            <div class="complete-icon">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+
+            <h1>変更が完了しました</h1>
+
+            <p>店長アカウントの変更が完了しました。</p>
+
+            <a href="{% url 'manager_list' %}" class="back-btn">
+                店長アカウント一覧に戻る
+            </a>
+
+        </div>
+    </div>
+
+</body>
+</html>

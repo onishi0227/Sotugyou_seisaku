@@ -1,3 +1,4 @@
+```html
 {% load static %}
 
 <!DOCTYPE html>
@@ -26,21 +27,6 @@
             color: white;
             font-size: 20px;
             font-weight: bold;
-        }
-
-        .user-icon {
-            position: absolute;
-            top: 50%;
-            right: 30px;
-            transform: translateY(-50%);
-            color: white !important;
-            font-size: 22px;
-            text-decoration: none !important;
-            z-index: 9999;
-        }
-
-        .user-icon:hover {
-            color: #cccccc !important;
         }
 
         /* メイン部分 */
@@ -204,68 +190,49 @@
                     </thead>
 
                     <tbody>
-                        <!-- サンプルデータ：新しい発注が上 -->
+                        {% for purchase_request in purchase_requests %}
                         <tr>
-                            <td>PO003</td>
-                            <td>川越店</td>
-                            <td>鈴木 一郎</td>
-                            <td>2026/10/14 14:00</td>
-                            <td>5</td>
+                            <td>{{ purchase_request.pk }}</td>
+
                             <td>
-                                <a href="{% url 'order_detail' %}"
+                                {{ purchase_request.store_code }}
+                            </td>
+
+                            <td>
+                                {{ purchase_request.requested_by.user.username }}
+                            </td>
+
+                            <td>
+                                {{ purchase_request.requested_at|date:"Y/m/d H:i" }}
+                            </td>
+
+                            <td>
+                                {{ purchase_request.details.all|length }}
+                            </td>
+
+                            <td>
+                                <a href="{% url 'order_detail' request_id=purchase_request.pk %}"
                                    class="detail-button">
                                     詳細
                                 </a>
                             </td>
                         </tr>
-
-                        <tr>
-                            <td>PO002</td>
-                            <td>浦和店</td>
-                            <td>佐藤 花子</td>
-                            <td>2026/10/14 11:15</td>
-                            <td>3</td>
-                            <td>
-                                <a href="{% url 'order_detail' %}"
-                                   class="detail-button">
-                                    詳細
-                                </a>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td>PO001</td>
-                            <td>大宮店</td>
-                            <td>山田 太郎</td>
-                            <td>2026/10/14 10:30</td>
-                            <td>2</td>
-                            <td>
-                                <a href="{% url 'order_detail' %}"
-                                   class="detail-button">
-                                    詳細
-                                </a>
-                            </td>
-                        </tr>
-
-                        <!--
-                        発注がない場合は、上の3件を削除して
-                        次の行を使用する
-
+                        {% empty %}
                         <tr>
                             <td colspan="6" class="no-orders">
                                 発注はありません
                             </td>
                         </tr>
-                        -->
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
 
-            <!-- 発注画面に戻る -->
+            <!-- 本社トップ画面に戻る -->
             <div class="back-area">
-                <a href="{% url 'order_menu' %}"
+                <a href="{% url 'headquarters_top' %}"
                    class="back-button">
-                    発注画面に戻る
+                    本社トップに戻る
                 </a>
             </div>
 
@@ -276,3 +243,4 @@
 
 </body>
 </html>
+```

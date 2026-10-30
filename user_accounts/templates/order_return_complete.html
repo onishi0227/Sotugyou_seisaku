@@ -1,0 +1,253 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>発注・差し戻し完了</title>
+
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background-color: #f8f9fa;
+            font-family: Arial, "Meiryo", sans-serif;
+            color: #212529;
+        }
+
+        /* ナビバー */
+        .custom-navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #212529;
+            padding: 18px 0;
+            z-index: 1030;
+        }
+
+        .navbar-inner {
+            width: 100%;
+            max-width: 1140px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .system-name {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* メイン */
+        .complete-main {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 150px 20px 60px;
+        }
+
+        /* 完了カード */
+        .complete-card {
+            width: 100%;
+            max-width: 650px;
+            margin: 0 auto;
+            padding: 50px 30px;
+            background-color: white;
+            border: 1px solid #d9e2ef;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+
+        /* 完了アイコン */
+        .complete-icon {
+            margin-bottom: 25px;
+            color: #198754;
+            font-size: 70px;
+        }
+
+        /* タイトル */
+        .complete-title {
+            margin: 0 0 20px;
+            font-size: 30px;
+            font-weight: bold;
+            line-height: 1.5;
+        }
+
+        /* 完了メッセージ */
+        .complete-message {
+            margin: 0 0 35px;
+            color: #555;
+            font-size: 16px;
+            line-height: 1.8;
+        }
+
+        /* 完了日時 */
+        .complete-date {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            color: #555;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        /* ボタン */
+        .button-area {
+            display: flex;
+            justify-content: center;
+        }
+
+        .back-button {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 260px;
+            min-height: 48px;
+            padding: 12px 22px;
+            border: 1px solid #212529;
+            border-radius: 6px;
+            background-color: #212529;
+            color: white;
+            text-decoration: none;
+            text-align: center;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .back-button:hover {
+            background-color: #424649;
+            border-color: #424649;
+            color: white;
+            text-decoration: none;
+        }
+
+        .back-button:focus-visible {
+            outline: 3px solid #86b7fe;
+            outline-offset: 3px;
+        }
+
+        /* スマートフォン対応 */
+        @media (max-width: 768px) {
+            .navbar-inner {
+                padding: 0 15px;
+            }
+
+            .system-name {
+                font-size: 15px;
+            }
+
+            .complete-main {
+                padding: 120px 15px 35px;
+            }
+
+            .complete-card {
+                padding: 40px 20px;
+            }
+
+            .complete-icon {
+                font-size: 60px;
+            }
+
+            .complete-title {
+                font-size: 25px;
+            }
+
+            .complete-message {
+                font-size: 15px;
+            }
+
+            .back-button {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ナビバー -->
+    <nav class="custom-navbar">
+        <div class="navbar-inner">
+            <span class="system-name">
+                注文連携型 在庫管理・発注支援システム
+            </span>
+        </div>
+    </nav>
+
+    <!-- 発注・差し戻し完了画面 -->
+    <main class="complete-main">
+
+        <section class="complete-card">
+
+            <!-- 完了アイコン -->
+            <div class="complete-icon" aria-hidden="true">
+                <i class="fa-regular fa-circle-check"></i>
+            </div>
+
+            <!-- タイトル -->
+            <h1 class="complete-title">
+                発注・差し戻し完了
+            </h1>
+
+            <!-- 完了メッセージ -->
+            <p class="complete-message">
+                発注・差し戻しが完了しました。<br>
+                内容を確認してください。
+            </p>
+
+            <!-- 完了日時 -->
+            <div class="complete-date">
+                <strong>完了日時：</strong>
+                <span id="complete-datetime">読み込み中...</span>
+            </div>
+
+            <!-- 発注管理画面に戻る -->
+            <div class="button-area">
+                <a href="{% url 'order' %}" class="back-button">
+                    発注管理画面に戻る
+                </a>
+            </div>
+
+        </section>
+
+    </main>
+
+    <script>
+        // 完了日時を表示
+        const now = new Date();
+
+        const formattedDate = new Intl.DateTimeFormat("ja-JP", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false
+        }).format(now);
+
+        document.getElementById("complete-datetime").textContent =
+            formattedDate;
+    </script>
+
+</body>
+</html>

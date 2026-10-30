@@ -657,6 +657,73 @@ def store_top(request):
 
 @never_cache
 @require_GET
+def staff_management(request):
+    """店長用の店員アカウント管理画面を表示する。"""
+    profile, access_response = _check_store_access(
+        request,
+        manager_only=True,
+    )
+
+    if access_response is not None:
+        return access_response
+
+    return render(
+        request,
+        "staff_management.html",
+        {
+            "store_code": profile.store_code.strip(),
+            "manager_name": (
+                profile.full_name.strip()
+                or profile.user.get_username()
+            ),
+        },
+    )
+
+
+@never_cache
+@require_GET
+def inventory_list(request):
+    """S-11 自店舗の最終棚卸結果を表示する。"""
+    profile, access_response = _check_store_access(request)
+
+    if access_response is not None:
+        return access_response
+
+    store_code = profile.store_code.strip()
+    latest_by_ingredient = {}
+
+    latest_records = (
+        Stocktake.objects.filter(store_code=store_code)
+        .select_related("ingredient")
+        .order_by(
+            "ingredient_id",
+            "-stocktake_date",
+            "-updated_at",
+        )
+    )
+
+    for record in latest_records:
+        latest_by_ingredient.setdefault(record.ingredient_id, record)
+
+    inventory_rows = [
+        {
+            "ingredient": ingredient,
+            "stocktake": latest_by_ingredient.get(ingredient.pk),
+        }
+        for ingredient in Ingredient.objects.order_by("name")
+    ]
+
+    return render(
+        request,
+        "stock_list.html",
+        {
+            "inventory_rows": inventory_rows,
+            "store_code": store_code,
+        },
+    )
+
+@never_cache
+@require_GET
 def inventory_list(request):
     """S-11 自店舗の最終棚卸結果を表示する。"""
     profile, access_response = _check_store_access(request)
@@ -2341,6 +2408,6 @@ def logout_view(request):
                 profile.save(update_fields=["active_session_key"])
 
         auth_logout(request)
-        return redirect("login")
+        return redirect("entry")
 
     return render(request, "logout.html")

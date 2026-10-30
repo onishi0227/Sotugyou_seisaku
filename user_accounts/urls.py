@@ -2,7 +2,8 @@
 from django.urls import path
 
 from . import views
-
+from . import staff_views
+from . import headquarters_manager_views
 
 urlpatterns = [
     # 入口
@@ -21,6 +22,28 @@ urlpatterns = [
         name="select_headquarters_portal",
     ),
 
+    # 本社管理者：社員アカウント管理
+    path(
+        "headquarters/staff-menu",
+        headquarters_manager_views.manager_menu,
+        name="staff_menu",
+    ),
+    path(
+        "headquarters/managers",
+        headquarters_manager_views.manager_list,
+        name="manager_list",
+    ),
+    path(
+        "headquarters/managers/<str:employee_id>/edit",
+        headquarters_manager_views.manager_edit,
+        name="manager_edit",
+    ),
+    path(
+        "headquarters/managers/<str:employee_id>/delete",
+        headquarters_manager_views.manager_delete,
+        name="manager_delete",
+    ),
+
     # アカウント作成・ログイン・ログアウト
     path(
         "account-register",
@@ -35,11 +58,21 @@ urlpatterns = [
     ),
     path("logout", views.logout_view, name="logout"),
 
-    # 店舗トップ・在庫一覧・棚卸
+    # 店舗トップ・店員アカウント管理・店員一覧・在庫一覧・棚卸
     path(
         "store/top",
         views.store_top,
         name="store_top",
+    ),
+    path(
+        "store/staff-management",
+        views.staff_management,
+        name="staff_management",
+    ),
+    path(
+        "store/staff-list",
+        staff_views.staff_list,
+        name="staff_list",
     ),
     path(
         "store/inventory",
@@ -55,6 +88,18 @@ urlpatterns = [
         "store/stocktake/complete",
         views.stocktake_complete,
         name="stocktake_complete",
+    ),
+
+    # 店員アカウントの変更・削除
+    path(
+        "store/staff/<str:employee_id>/edit",
+        staff_views.staff_edit,
+        name="staff_edit",
+    ),
+    path(
+        "store/staff/<str:employee_id>/delete",
+        staff_views.staff_delete,
+        name="staff_delete",
     ),
 
     # 在庫切れ予測・発注登録

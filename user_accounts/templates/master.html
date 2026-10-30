@@ -1,3 +1,4 @@
+
 {% load static %}
 <!DOCTYPE html>
 <html lang="ja">
@@ -161,33 +162,33 @@
         <h1>マスタ管理</h1>
 
         <p class="subtitle">
-            店長・食材・メニュー・レシピの基本情報を管理できます
+            社員・食材・メニュー・レシピの基本情報を管理できます
         </p>
 
         <div class="menu-grid">
 
-            <!-- 店長アカウントの登録 -->
-            <a href="{% url 'account_register' %}" class="menu-card">
-                <i class="fa-solid fa-user-plus"></i>
-                <h3>店長アカウントの登録</h3>
-                <p>各店舗の店長アカウントを登録します</p>
+            <!-- 社員アカウント管理 -->
+            <a href="{% url 'staff_menu' %}" class="menu-card">
+                <i class="fa-solid fa-users"></i>
+                <h3>社員アカウント管理</h3>
+                <p>全店舗の店長アカウントを確認・管理します</p>
             </a>
 
-            <!-- 食材の登録：画面接続前 -->
+            <!-- 食材の登録 -->
             <a href="{% url 'ingredient_register' %}" class="menu-card">
                 <i class="fa-solid fa-carrot"></i>
                 <h3>食材の登録</h3>
                 <p>食材の情報を登録します</p>
             </a>
 
-            <!-- メニューの登録：画面接続前 -->
+            <!-- メニューの登録 -->
             <a href="{% url 'menu_register' %}" class="menu-card">
                 <i class="fa-solid fa-utensils"></i>
                 <h3>メニューの登録</h3>
                 <p>メニューの情報を登録します</p>
             </a>
 
-            <!-- レシピの登録：画面接続前 -->
+            <!-- レシピの登録 -->
             <a href="{% url 'recipe_register' %}" class="menu-card">
                 <i class="fa-solid fa-book-open"></i>
                 <h3>レシピの登録</h3>

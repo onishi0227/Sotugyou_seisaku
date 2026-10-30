@@ -1,0 +1,233 @@
+
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社員アカウント一覧</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Meiryo", sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .navbar {
+            background-color: #212529;
+            color: white;
+            padding: 20px 30px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        h2 {
+            margin-bottom: 25px;
+        }
+
+        .table-container {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 16px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #e9ecef;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border: 1px solid #212529;
+            border-radius: 5px;
+            background-color: #212529;
+            color: white;
+            text-decoration: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            transition: opacity 0.2s ease;
+        }
+
+        .edit-btn,
+        .delete-btn {
+            background-color: #212529;
+            color: white;
+            border-color: #212529;
+        }
+
+        .edit-btn:hover,
+        .delete-btn:hover {
+            background-color: #212529;
+            color: white;
+            opacity: 0.85;
+            transform: none;
+        }
+
+        .back-button-area {
+            text-align: center;
+            margin-top: 25px;
+        }
+
+        .back-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #212529;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: opacity 0.2s ease;
+        }
+
+        .back-btn:hover {
+            opacity: 0.85;
+        }
+
+        .edit-btn:focus-visible,
+        .delete-btn:focus-visible,
+        .back-btn:focus-visible {
+            outline: 2px solid #6c757d;
+            outline-offset: 3px;
+        }
+
+        @media (max-width: 576px) {
+            .navbar {
+                padding: 18px 15px;
+                font-size: 16px;
+            }
+
+            .container {
+                margin-top: 25px;
+                padding: 0 12px;
+            }
+
+            .table-container {
+                padding: 12px;
+            }
+
+            th, td {
+                padding: 12px 8px;
+                white-space: nowrap;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .btn,
+            .back-btn {
+                transition: none;
+            }
+
+            .edit-btn:hover,
+            .delete-btn:hover {
+                transform: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="navbar">
+        在庫管理・発注支援システム
+    </div>
+
+    <div class="container">
+        <h2>社員アカウント一覧</h2>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>社員ID</th>
+                        <th>社員名</th>
+                        <th>変更</th>
+                        <th>削除</th>
+                    </tr>
+                </thead>
+
+                <tbody id="staff-table-body">
+
+                    {% for manager in managers %}
+                    <tr>
+                        <td>{{ manager.user.username }}</td>
+                        <td>{{ manager.full_name }}</td>
+                        <td>
+                            <a href="{% url 'manager_edit' manager.user.username %}"
+                               class="btn edit-btn">
+                                変更
+                            </a>
+                        </td>
+                        <td>
+                            <form method="POST"
+                                  action="{% url 'manager_delete' manager.user.username %}"
+                                  onsubmit="return confirmDelete(this);">
+                                {% csrf_token %}
+                                <button
+                                    type="submit"
+                                    class="btn delete-btn">
+                                    削除
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4">
+                            登録されている店長アカウントはありません。
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                </tbody>
+            </table>
+        </div>
+
+        <div class="back-button-area">
+            <a href="{% url 'staff_menu' %}" class="back-btn">
+                社員アカウント管理画面に戻る
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function confirmDelete(form) {
+            const row = form.closest("tr");
+            const staffId = row.cells[0].textContent.trim();
+            const staffName = row.cells[1].textContent.trim();
+
+            return confirm(
+                "社員ID：" + staffId + "\n" +
+                "社員名：" + staffName + "\n\n" +
+                "この社員アカウントを削除してもよろしいですか？"
+            );
+        }
+    </script>
+
+</body>
+</html>

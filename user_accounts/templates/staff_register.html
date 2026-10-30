@@ -1,0 +1,389 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>店長アカウント登録</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Meiryo", sans-serif;
+            background-color: white;
+            color: #333;
+        }
+
+        .navbar {
+            background-color: #212529;
+            color: white;
+            padding: 20px 30px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 650px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        h2 {
+            margin-bottom: 25px;
+        }
+
+        .form-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .form-group {
+            margin-bottom: 22px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            font-family: inherit;
+        }
+
+        input:focus-visible {
+            outline: 2px solid #6c757d;
+            outline-offset: 2px;
+        }
+
+        /* エラーメッセージ */
+        .input-error {
+            color: red;
+            font-size: 14px;
+            margin: 6px 0 0;
+        }
+
+        /* 入力エラー時の枠線 */
+        input.input-invalid {
+            border: 1px solid red;
+        }
+
+        .button-area {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+
+        .btn {
+            display: inline-block;
+            min-width: 120px;
+            padding: 12px 20px;
+            border: 1px solid #212529;
+            border-radius: 5px;
+            background-color: #212529;
+            color: white;
+            text-decoration: none;
+            text-align: center;
+            font-family: inherit;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            opacity: 0.85;
+        }
+
+        @media (max-width: 576px) {
+            .navbar {
+                padding: 18px 15px;
+                font-size: 16px;
+            }
+
+            .container {
+                margin-top: 25px;
+                padding: 0 12px;
+            }
+
+            .form-container {
+                padding: 20px;
+            }
+
+            .button-area {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="navbar">
+        在庫管理・発注支援システム
+    </div>
+
+    <div class="container">
+        <h2>店長アカウント登録</h2>
+
+        <div class="form-container">
+
+            <form
+                id="account-register-form"
+                action="{% url 'manager_register_complete' %}"
+                method="get"
+            >
+
+                <!-- 店舗番号 -->
+                <div class="form-group">
+                    <label for="store_number">店舗番号</label>
+                    <input
+                        type="text"
+                        id="store_number"
+                        name="store_number"
+                        placeholder="店舗番号を入力してください"
+                        required
+                    >
+                </div>
+
+                <!-- 社員ID -->
+                <div class="form-group">
+                    <label for="employee_id">社員ID</label>
+                    <input
+                        type="text"
+                        id="employee_id"
+                        name="employee_id"
+                        placeholder="社員IDを入力してください"
+                        aria-describedby="employee-id-error"
+                        required
+                    >
+                    <p
+                        id="employee-id-error"
+                        class="input-error"
+                        style="display: none;"
+                        role="alert"
+                    >半角で入力してください</p>
+                </div>
+
+                <!-- 氏名 -->
+                <div class="form-group">
+                    <label for="employee_name">氏名</label>
+                    <input
+                        type="text"
+                        id="employee_name"
+                        name="employee_name"
+                        placeholder="氏名を入力してください"
+                        required
+                    >
+                </div>
+
+                <!-- パスワード -->
+                <div class="form-group">
+                    <label for="password">パスワード</label>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="パスワードを入力してください"
+                        aria-describedby="password-error"
+                        required
+                    >
+                    <p
+                        id="password-error"
+                        class="input-error"
+                        style="display: none;"
+                        role="alert"
+                    >半角で入力してください</p>
+                </div>
+
+                <!-- パスワード確認用 -->
+                <div class="form-group">
+                    <label for="password_confirm">
+                        パスワード（確認用）
+                    </label>
+                    <input
+                        type="password"
+                        id="password_confirm"
+                        name="password_confirm"
+                        placeholder="もう一度パスワードを入力してください"
+                        aria-describedby="password-confirm-error"
+                        required
+                    >
+                    <p
+                        id="password-confirm-error"
+                        class="input-error"
+                        style="display: none;"
+                        role="alert"
+                    >パスワードが一致しません</p>
+                </div>
+
+                <!-- ボタン -->
+                <div class="button-area">
+                    <a href="{% url 'staff_accounts' %}" class="btn">
+                        社員アカウント画面に戻る
+                    </a>
+
+                    <button type="submit" class="btn">
+                        登録
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const form =
+                document.getElementById("account-register-form");
+
+            const employeeId =
+                document.getElementById("employee_id");
+            const employeeIdError =
+                document.getElementById("employee-id-error");
+
+            const password =
+                document.getElementById("password");
+            const passwordError =
+                document.getElementById("password-error");
+
+            const passwordConfirm =
+                document.getElementById("password_confirm");
+            const passwordConfirmError =
+                document.getElementById("password-confirm-error");
+
+            // 半角英数字・半角記号のみを許可
+            const halfWidthPattern = /^[\x21-\x7E]*$/;
+
+            // 半角入力チェック
+            function validateHalfWidth(input, errorElement) {
+                const isValid =
+                    halfWidthPattern.test(input.value);
+
+                errorElement.style.display =
+                    isValid ? "none" : "block";
+
+                input.classList.toggle(
+                    "input-invalid",
+                    !isValid
+                );
+
+                input.setAttribute(
+                    "aria-invalid",
+                    String(!isValid)
+                );
+
+                return isValid;
+            }
+
+            // パスワード確認用の入力チェック
+            function validatePasswordConfirm() {
+                const isHalfWidth =
+                    halfWidthPattern.test(passwordConfirm.value);
+
+                const isMatch =
+                    password.value === passwordConfirm.value;
+
+                let message = "";
+
+                if (!isHalfWidth) {
+                    message = "半角で入力してください";
+                } else if (
+                    passwordConfirm.value !== "" &&
+                    !isMatch
+                ) {
+                    message = "パスワードが一致しません";
+                }
+
+                passwordConfirmError.textContent = message;
+
+                passwordConfirmError.style.display =
+                    message ? "block" : "none";
+
+                passwordConfirm.classList.toggle(
+                    "input-invalid",
+                    Boolean(message)
+                );
+
+                passwordConfirm.setAttribute(
+                    "aria-invalid",
+                    String(Boolean(message))
+                );
+
+                return isHalfWidth && isMatch;
+            }
+
+            // 社員IDを入力中にチェック
+            employeeId.addEventListener("input", function () {
+                validateHalfWidth(
+                    employeeId,
+                    employeeIdError
+                );
+            });
+
+            // パスワードを入力中にチェック
+            password.addEventListener("input", function () {
+                validateHalfWidth(
+                    password,
+                    passwordError
+                );
+
+                if (passwordConfirm.value !== "") {
+                    validatePasswordConfirm();
+                }
+            });
+
+            // 確認用パスワードを入力中にチェック
+            passwordConfirm.addEventListener(
+                "input",
+                function () {
+                    validatePasswordConfirm();
+                }
+            );
+
+            // 登録ボタンを押したときにチェック
+            form.addEventListener("submit", function (event) {
+                const employeeIdValid =
+                    validateHalfWidth(
+                        employeeId,
+                        employeeIdError
+                    );
+
+                const passwordValid =
+                    validateHalfWidth(
+                        password,
+                        passwordError
+                    );
+
+                const passwordConfirmValid =
+                    validatePasswordConfirm();
+
+                if (
+                    !employeeIdValid ||
+                    !passwordValid ||
+                    !passwordConfirmValid
+                ) {
+                    event.preventDefault();
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
