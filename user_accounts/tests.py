@@ -257,7 +257,7 @@ class LogoutTests(TestCase):
 
         # ログアウト後はログイン画面へ遷移する
         response = self.client.post(reverse("logout"))
-        self.assertRedirects(response, reverse("login"))
+        self.assertRedirects(response, reverse("entry"))
 
         # ログイン成功画面へ再アクセスすると、入口画面へ戻る
         response = self.client.get(reverse("login_success"))

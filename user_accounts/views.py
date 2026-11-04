@@ -1023,6 +1023,17 @@ def ingredient_register(request):
         {"form": form},
     )
 
+@never_cache
+@require_GET
+def headquarters_stock(request):
+    """本社管理者用の在庫メニュー画面を表示する。"""
+    access_response = _check_headquarters_access(request)
+
+    if access_response is not None:
+        return access_response
+
+    return render(request, "stock.html")
+
 
 @never_cache
 @require_http_methods(["GET", "POST"])
@@ -1558,7 +1569,7 @@ def stockout_order_registration(request):
 @never_cache
 @require_GET
 def stockout_order_registration_page(request):
-    """発注内容を確認する画面を表示する。"""
+    """通常発注または在庫切れ予測からの発注登録画面を表示する。"""
     profile, access_response = _check_store_access(
         request,
         manager_only=True,
@@ -1568,41 +1579,54 @@ def stockout_order_registration_page(request):
         return access_response
 
     store_code = profile.store_code.strip()
-    selected_store_code = request.session.get(
-        "stockout_selected_store_code",
-        "",
-    )
-    selected_items = request.session.get(
-        "stockout_selected_items",
-        [],
-    )
 
-    if not selected_items or selected_store_code != store_code:
-        store_id = _get_store_id_from_code(store_code)
-
-        if store_id is None:
-            return HttpResponseForbidden(
-                "所属店舗コードから店舗IDを取得できません。"
-                "管理者に確認してください。"
-            )
-
-        prediction_rows = _build_stockout_prediction_rows(
-            store_code=store_code,
-            store_id=store_id,
+    # ---------------------------------------------
+    # 通常発注：登録済みの全食材を表示する
+    # ---------------------------------------------
+    if request.GET.get("mode") == "normal":
+        ingredients = list(
+            Ingredient.objects.order_by("name")
         )
+
+        latest_stocktakes = (
+            Stocktake.objects.filter(
+                store_code=store_code,
+            )
+            .select_related("ingredient")
+            .order_by(
+                "ingredient_id",
+                "-stocktake_date",
+                "-updated_at",
+            )
+        )
+
+        latest_by_ingredient = {}
+
+        for stocktake in latest_stocktakes:
+            latest_by_ingredient.setdefault(
+                stocktake.ingredient_id,
+                stocktake,
+            )
 
         selected_items = []
 
-        for row in prediction_rows:
-            if row["missing_stock"] or not row["needs_order"]:
-                continue
+        for ingredient in ingredients:
+            stocktake = latest_by_ingredient.get(
+                ingredient.pk
+            )
 
-            recommended_quantity = row["recommended_quantity_raw"]
+            if stocktake is None:
+                actual_stock_display = "未登録"
+                stocktake_date_display = "—"
+            else:
+                actual_stock_display = (
+                    f"{_format_quantity(stocktake.actual_quantity)}"
+                    f" {ingredient.unit}"
+                )
+                stocktake_date_display = (
+                    stocktake.stocktake_date.strftime("%Y/%m/%d")
+                )
 
-            if Decimal(recommended_quantity) <= 0:
-                continue
-
-            ingredient = row["ingredient"]
             selected_items.append(
                 {
                     "id": ingredient.pk,
@@ -1610,21 +1634,79 @@ def stockout_order_registration_page(request):
                     "name": ingredient.name,
                     "ingredient_name": ingredient.name,
                     "unit": ingredient.unit,
-                    "quantity": recommended_quantity,
-                    "recommended_quantity": recommended_quantity,
-                    "recommended_quantity_display": (
-                        row["recommended_quantity_display"]
-                    ),
-                    "delivery_days": row["delivery_days"],
-                    "actual_stock_display": row["actual_stock_display"],
-                    "stocktake_date_display": (
-                        row["stocktake_date_display"]
-                    ),
+                    "recommended_quantity": "0",
+                    "recommended_quantity_display": "—",
+                    "actual_stock_display": actual_stock_display,
+                    "stocktake_date_display": stocktake_date_display,
+                    "is_normal_order": True,
                 }
             )
 
         request.session["stockout_selected_items"] = selected_items
         request.session["stockout_selected_store_code"] = store_code
+
+    # ---------------------------------------------
+    # 在庫切れ予測：従来どおり選択食材を表示する
+    # ---------------------------------------------
+    else:
+        selected_store_code = request.session.get(
+            "stockout_selected_store_code",
+            "",
+        )
+        selected_items = request.session.get(
+            "stockout_selected_items",
+            [],
+        )
+
+        if not selected_items or selected_store_code != store_code:
+            store_id = _get_store_id_from_code(store_code)
+
+            if store_id is None:
+                return HttpResponseForbidden(
+                    "所属店舗コードから店舗IDを取得できません。"
+                    "管理者に確認してください。"
+                )
+
+            prediction_rows = _build_stockout_prediction_rows(
+                store_code=store_code,
+                store_id=store_id,
+            )
+
+            selected_items = []
+
+            for row in prediction_rows:
+                if row["missing_stock"] or not row["needs_order"]:
+                    continue
+
+                recommended_quantity = row["recommended_quantity_raw"]
+
+                if Decimal(recommended_quantity) <= 0:
+                    continue
+
+                ingredient = row["ingredient"]
+
+                selected_items.append(
+                    {
+                        "id": ingredient.pk,
+                        "ingredient_id": ingredient.pk,
+                        "name": ingredient.name,
+                        "ingredient_name": ingredient.name,
+                        "unit": ingredient.unit,
+                        "quantity": recommended_quantity,
+                        "recommended_quantity": recommended_quantity,
+                        "recommended_quantity_display": (
+                            row["recommended_quantity_display"]
+                        ),
+                        "delivery_days": row["delivery_days"],
+                        "actual_stock_display": row["actual_stock_display"],
+                        "stocktake_date_display": (
+                            row["stocktake_date_display"]
+                        ),
+                    }
+                )
+
+            request.session["stockout_selected_items"] = selected_items
+            request.session["stockout_selected_store_code"] = store_code
 
     return render(
         request,

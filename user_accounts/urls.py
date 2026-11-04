@@ -190,6 +190,13 @@ urlpatterns = [
         name="recipe_register",
     ),
 
+        # 本社管理者用・在庫メニュー
+    path(
+        "headquarters/stock",
+        views.headquarters_stock,
+        name="headquarters_stock",
+    ),
+
     # 本社側・発注管理
     path(
         "headquarters/orders",

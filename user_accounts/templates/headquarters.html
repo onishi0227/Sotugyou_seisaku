@@ -1,3 +1,4 @@
+
 {% load static %}
 <!DOCTYPE html>
 <html lang="ja">
@@ -62,12 +63,12 @@
             color: #777;
         }
 
-        /* メニューを2つ横並びにする */
+        /* メニューを3つ横並びにする */
         .menu-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 30px;
-            max-width: 900px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
@@ -133,6 +134,13 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* タブレット */
+        @media (min-width: 577px) and (max-width: 900px) {
+            .menu-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
     </style>
 </head>
 
@@ -179,16 +187,27 @@
                     <p>発注情報を管理します</p>
                 </a>
 
+                <!-- 在庫 -->
+                <a href="{% url 'headquarters_stock' %}" class="menu-card">
+                    <div class="menu-icon">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                    </div>
+
+                    <h3>在庫</h3>
+
+                    <p>在庫情報を管理します</p>
+                </a>
+
                 <!-- マスタ管理 -->
-                    <a href="{% url 'headquarters_master' %}" class="menu-card">
-                        <div class="menu-icon">
-                            <i class="fa-solid fa-database"></i>
-                        </div>
+                <a href="{% url 'headquarters_master' %}" class="menu-card">
+                    <div class="menu-icon">
+                        <i class="fa-solid fa-database"></i>
+                    </div>
 
-                        <h3>マスタ管理</h3>
+                    <h3>マスタ管理</h3>
 
-                        <p>各種マスタ情報を管理します</p>
-                    </a>
+                    <p>各種マスタ情報を管理します</p>
+                </a>
 
             </div>
         </div>
