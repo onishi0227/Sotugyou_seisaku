@@ -151,6 +151,18 @@ urlpatterns = [
         name="purchase_request_cancel",
     ),
 
+    # 店長用・差し戻し発注の確認／再発注
+    path(
+        "store/order-return/<int:request_id>",
+        views.order_return_edit,
+        name="order_return_edit",
+    ),
+    path(
+        "store/order-return/complete",
+        views.order_resubmit_complete,
+        name="order_resubmit_complete",
+    ),
+
     # 本社管理者
     path(
         "headquarters/top",

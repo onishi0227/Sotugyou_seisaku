@@ -24,7 +24,6 @@
             font-family: Arial, "Meiryo", sans-serif;
         }
 
-        /* ナビバー */
         .custom-navbar {
             background-color: #212529;
             padding: 18px 0;
@@ -37,13 +36,11 @@
             font-weight: bold;
         }
 
-        /* メイン */
         .detail-main {
             padding-top: 110px;
             padding-bottom: 50px;
         }
 
-        /* タイトル */
         .detail-title {
             text-align: center;
             margin-bottom: 35px;
@@ -58,7 +55,6 @@
             color: #777;
         }
 
-        /* 情報カード */
         .info-card {
             margin-bottom: 25px;
             background: white;
@@ -107,7 +103,6 @@
             overflow-wrap: anywhere;
         }
 
-        /* 食材テーブル */
         .ingredient-container {
             padding: 15px;
             overflow-x: auto;
@@ -115,7 +110,7 @@
 
         .ingredient-table {
             width: 100%;
-            min-width: 500px;
+            min-width: 600px;
             border-collapse: collapse;
             text-align: center;
         }
@@ -142,7 +137,21 @@
             accent-color: #212529;
         }
 
-        /* ボタンエリア */
+        .status-pending {
+            color: #856404;
+            font-weight: bold;
+        }
+
+        .status-approved {
+            color: #198754;
+            font-weight: bold;
+        }
+
+        .status-rejected {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
         .button-area {
             display: flex;
             justify-content: center;
@@ -152,7 +161,6 @@
             flex-wrap: wrap;
         }
 
-        /* 共通ボタン */
         .back-button,
         .confirm-button {
             display: inline-block;
@@ -177,7 +185,22 @@
             text-decoration: none;
         }
 
-        /* スマートフォン */
+        .confirm-button:disabled {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .processed-message {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e9ecef;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            text-align: center;
+            color: #495057;
+        }
+
         @media (max-width: 768px) {
             .system-name {
                 font-size: 15px;
@@ -219,7 +242,6 @@
 
 <body>
 
-    <!-- ナビバー -->
     <nav class="custom-navbar fixed-top">
         <div class="container">
             <span class="system-name">
@@ -228,11 +250,9 @@
         </div>
     </nav>
 
-    <!-- メイン -->
     <main class="detail-main">
         <div class="container">
 
-            <!-- タイトル -->
             <div class="detail-title">
                 <h1>発注詳細</h1>
                 <p>発注情報の詳細を確認できます</p>
@@ -251,29 +271,29 @@
                         <div>
                             <div class="info-row">
                                 <span class="info-label">発注ID</span>
-                                <span>PO003</span>
+                                <span>PO{{ purchase_request.id }}</span>
                             </div>
 
                             <div class="info-row">
                                 <span class="info-label">店舗</span>
-                                <span>川越店</span>
+                                <span>{{ purchase_request.store_code }}</span>
                             </div>
 
                             <div class="info-row">
                                 <span class="info-label">店長</span>
-                                <span>鈴木 一郎</span>
+                                <span>{{ purchase_request.requested_by.full_name }}</span>
                             </div>
                         </div>
 
                         <div>
                             <div class="info-row">
                                 <span class="info-label">発注日時</span>
-                                <span>2026/10/14 14:00</span>
+                                <span>{{ purchase_request.requested_at|date:"Y/m/d H:i" }}</span>
                             </div>
 
                             <div class="info-row">
                                 <span class="info-label">店舗からのメモ</span>
-                                <span class="memo-text">野菜を多めにお願いします。</span>
+                                <span class="memo-text">{{ purchase_request.note|default:"メモはありません" }}</span>
                             </div>
                         </div>
 
@@ -289,150 +309,222 @@
                 </div>
 
                 <div class="ingredient-container">
+
+                    {% if can_process %}
+
+                    <form method="POST" id="orderForm">
+                        {% csrf_token %}
+
+                        <input type="hidden" name="action" value="process">
+
+                        <!-- エラーメッセージ -->
+                        {% if errors %}
+                            <div style="margin: 15px 0; padding: 12px; background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; border-radius: 5px;">
+                                {% for error in errors %}
+                                    <p style="margin: 5px 0;">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- 差し戻し理由 -->
+                        <div style="margin-bottom: 20px;">
+                            <label for="headquarters-comment"
+                                   style="display: block; font-weight: bold; margin-bottom: 8px;">
+                                差し戻し理由
+                            </label>
+
+                            <textarea
+                                id="headquarters-comment"
+                                name="headquarters_comment"
+                                rows="3"
+                                maxlength="1000"
+                                style="width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 5px;"
+                                placeholder="差し戻す理由を入力してください。">{{ headquarters_comment|default:"" }}</textarea>
+
+                            <p style="color: #777; font-size: 13px; margin-top: 5px;">
+                                差し戻す食材がある場合は、理由を入力してください。
+                            </p>
+                        </div>
+
+                        <table class="ingredient-table">
+                            <thead>
+                                <tr>
+                                    <th>差し戻し</th>
+                                    <th>食材名</th>
+                                    <th>推奨数</th>
+                                    <th>発注数</th>
+                                    <th>審査状況</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {% for detail in details %}
+                                <tr>
+                                    <td>
+                                        {% if detail.status == "pending" %}
+                                            <input type="checkbox"
+                                                   name="selected_detail_ids"
+                                                   value="{{ detail.id }}"
+                                                   aria-label="{{ detail.ingredient }}を差し戻す"
+                                                   {% if detail.id in selected_detail_ids %}checked{% endif %}>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+
+                                    <td>{{ detail.ingredient }}</td>
+
+                                    <td>
+                                        {% if detail.recommended_quantity != None %}
+                                            {{ detail.recommended_quantity }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+
+                                    <td>{{ detail.quantity }}</td>
+
+                                    <td>
+                                        {% if detail.status == "pending" %}
+                                            <span class="status-pending">審査待ち</span>
+                                        {% elif detail.status == "approved" %}
+                                            <span class="status-approved">承認済み</span>
+                                        {% elif detail.status == "rejected" %}
+                                            <span class="status-rejected">差し戻し済み</span>
+                                        {% else %}
+                                            {{ detail.status }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5">
+                                        発注食材がありません。
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+
+                        <div class="button-area">
+
+                            <a href="{% url 'order' %}"
+                               class="back-button">
+                                発注管理画面に戻る
+                            </a>
+
+                            <button type="button"
+                                    class="confirm-button"
+                                    onclick="confirmOrder()">
+                                確定する
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                    {% else %}
+
+                    <div class="processed-message">
+                        <i class="fa-solid fa-circle-info"></i>
+                        この発注はすでに処理されています。
+                    </div>
+
                     <table class="ingredient-table">
                         <thead>
                             <tr>
-                                <th>差し戻し</th>
                                 <th>食材名</th>
                                 <th>推奨数</th>
                                 <th>発注数</th>
+                                <th>審査状況</th>
                             </tr>
                         </thead>
 
                         <tbody>
+                            {% for detail in details %}
                             <tr>
+                                <td>{{ detail.ingredient }}</td>
+
                                 <td>
-                                    <input type="checkbox"
-                                           name="selected_ingredients"
-                                           value="トマト"
-                                           aria-label="トマトを差し戻す">
+                                    {% if detail.recommended_quantity != None %}
+                                        {{ detail.recommended_quantity }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
                                 </td>
-                                <td>トマト</td>
-                                <td>10</td>
-                                <td>12</td>
+
+                                <td>{{ detail.quantity }}</td>
+
+                                <td>
+                                    {% if detail.status == "pending" %}
+                                        <span class="status-pending">審査待ち</span>
+                                    {% elif detail.status == "approved" %}
+                                        <span class="status-approved">承認済み</span>
+                                    {% elif detail.status == "rejected" %}
+                                        <span class="status-rejected">差し戻し済み</span>
+                                    {% else %}
+                                        {{ detail.status }}
+                                    {% endif %}
+                                </td>
                             </tr>
 
+                            {% empty %}
                             <tr>
-                                <td>
-                                    <input type="checkbox"
-                                           name="selected_ingredients"
-                                           value="牛肉（国産）"
-                                           aria-label="牛肉（国産）を差し戻す">
+                                <td colspan="4">
+                                    発注食材がありません。
                                 </td>
-                                <td>牛肉（国産）</td>
-                                <td>5</td>
-                                <td>7</td>
                             </tr>
-
-                            <tr>
-                                <td>
-                                    <input type="checkbox"
-                                           name="selected_ingredients"
-                                           value="玉ねぎ"
-                                           aria-label="玉ねぎを差し戻す">
-                                </td>
-                                <td>玉ねぎ</td>
-                                <td>8</td>
-                                <td>10</td>
-                            </tr>
-
-                            <tr>
-                                <td>
-                                    <input type="checkbox"
-                                           name="selected_ingredients"
-                                           value="レタス"
-                                           aria-label="レタスを差し戻す">
-                                </td>
-                                <td>レタス</td>
-                                <td>6</td>
-                                <td>8</td>
-                            </tr>
-
-                            <tr>
-                                <td>
-                                    <input type="checkbox"
-                                           name="selected_ingredients"
-                                           value="卵"
-                                           aria-label="卵を差し戻す">
-                                </td>
-                                <td>卵</td>
-                                <td>4</td>
-                                <td>5</td>
-                            </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
+
+                    <div class="button-area">
+                        <a href="{% url 'order' %}"
+                           class="back-button">
+                            発注管理画面に戻る
+                        </a>
+                    </div>
+
+                    {% endif %}
+
                 </div>
             </section>
-
-            <!-- 戻る・確定ボタン -->
-            <div class="button-area">
-
-                <a href="{% url 'order' %}"
-                   class="back-button">
-                    発注管理画面に戻る
-                </a>
-
-                <button type="button"
-                        class="confirm-button"
-                        onclick="confirmOrder()">
-                    確定する
-                </button>
-
-            </div>
 
         </div>
     </main>
 
+    {% if can_process %}
     <script>
-    function confirmOrder() {
-        // チェックされた食材を取得
-        const checkedItems = document.querySelectorAll(
-            'input[name="selected_ingredients"]:checked'
-        );
+        function confirmOrder() {
 
-        // チェックがある場合：差し戻し確認
-        if (checkedItems.length > 0) {
-            const result = window.confirm(
-                "この発注、差し戻しを確定しますか？"
+            const checkedItems = document.querySelectorAll(
+                'input[name="selected_detail_ids"]:checked'
             );
 
-            // OKを押した場合
-            if (result) {
-                // 差し戻し画面のURLを作成
-                const url = new URL(
-                    "{% url 'order_return' %}",
-                    window.location.origin
+            if (checkedItems.length > 0) {
+
+                const result = window.confirm(
+                    "チェックした食材を差し戻し、その他の審査待ち食材を承認しますか？"
                 );
 
-                // 選択した食材を差し戻し画面へ渡す
-                checkedItems.forEach(function (item) {
-                    url.searchParams.append(
-                        "selected_ingredients",
-                        item.value
-                    );
-                });
+                if (result) {
+                    document.getElementById("orderForm").submit();
+                }
 
-                // 差し戻し画面へ移動
-                window.location.href = url.toString();
+                return;
             }
 
-            // キャンセルの場合は何もしない
-            return;
+            const result = window.confirm(
+                "審査待ちの食材をすべて承認しますか？"
+            );
+
+            if (result) {
+                document.getElementById("orderForm").submit();
+            }
         }
-
-        // チェックがない場合：発注確定の確認
-        const result = window.confirm(
-            "この発注を確定しますか？"
-        );
-
-        // OKを押した場合
-        if (result) {
-            window.location.href = "{% url 'order_complete' %}";
-        }
-
-        // キャンセルの場合は何もしない
-    }
-</script>
+    </script>
+    {% endif %}
 
 </body>
 </html>

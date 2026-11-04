@@ -1,0 +1,590 @@
+
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>差し戻し内容確認・修正</title>
+
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background-color: #f8f9fa;
+            font-family: Arial, "Meiryo", sans-serif;
+            color: #333;
+        }
+
+        .custom-navbar {
+            background-color: #212529;
+            padding: 18px 0;
+            position: relative;
+            z-index: 1000;
+        }
+
+        .system-name {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .main-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 45px 20px 60px;
+        }
+
+        .page-title {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .page-title h1 {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .page-title p {
+            color: #777;
+            margin: 0;
+        }
+
+        .content-card {
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .return-status {
+            display: inline-block;
+            background-color: #c62828;
+            color: white;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .return-reason {
+            background-color: #fff5f5;
+            border-left: 4px solid #c62828;
+            padding: 15px 18px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .return-reason-title {
+            color: #b42318;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .return-reason p {
+            margin: 0;
+            line-height: 1.7;
+            white-space: pre-wrap;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .info-label {
+            color: #777;
+            font-size: 13px;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        .order-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 500px;
+        }
+
+        .order-table th,
+        .order-table td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #dee2e6;
+            text-align: center;
+        }
+
+        .order-table th {
+            background-color: #f1f3f5;
+            font-weight: bold;
+        }
+
+        .order-table td:first-child {
+            text-align: left;
+            font-weight: bold;
+        }
+
+        .quantity-input {
+            width: 90px;
+            padding: 9px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 15px;
+            text-align: center;
+        }
+
+        .delete-button {
+            background-color: white;
+            border: 1px solid #dc3545;
+            color: #dc3545;
+            border-radius: 5px;
+            padding: 7px 12px;
+            cursor: pointer;
+        }
+
+        .delete-button:hover {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .memo-label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .memo-input {
+            width: 100%;
+            min-height: 100px;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        .notice {
+            background-color: #fff8e6;
+            border: 1px solid #f1d58a;
+            border-radius: 6px;
+            padding: 13px 16px;
+            color: #765b18;
+            font-size: 13px;
+            margin-bottom: 25px;
+            line-height: 1.7;
+        }
+
+        .error-message {
+            background-color: #fff5f5;
+            border: 1px solid #dc3545;
+            border-radius: 6px;
+            padding: 12px 16px;
+            color: #b42318;
+            margin-bottom: 20px;
+        }
+
+        .button-area {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .action-button {
+            display: inline-block;
+            min-width: 200px;
+            padding: 13px 20px;
+            border-radius: 6px;
+            text-align: center;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            border: none;
+        }
+
+        .back-button {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .back-button:hover {
+            background-color: #565e64;
+            color: white;
+        }
+
+        .submit-button {
+            background-color: #198754;
+            color: white;
+        }
+
+        .submit-button:hover {
+            background-color: #146c43;
+        }
+
+        .decline-button {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .decline-button:hover {
+            background-color: #bb2d3b;
+        }
+
+        @media (max-width: 576px) {
+            .system-name {
+                font-size: 14px;
+            }
+
+            .main-container {
+                padding: 30px 12px 40px;
+            }
+
+            .page-title h1 {
+                font-size: 23px;
+            }
+
+            .content-card {
+                padding: 18px 15px;
+            }
+
+            .section-title {
+                font-size: 17px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+                gap: 13px;
+            }
+
+            .button-area {
+                flex-direction: column;
+            }
+
+            .action-button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="custom-navbar">
+        <div class="container">
+            <span class="system-name">
+                注文連携型 在庫管理・発注支援システム
+            </span>
+        </div>
+    </nav>
+
+    <main class="main-container">
+
+        <div class="page-title">
+            <h1>差し戻し内容確認・修正</h1>
+            <p>本社から差し戻された発注内容を確認し、修正してください。</p>
+        </div>
+
+        {% if errors %}
+            <div class="error-message">
+                {% for error in errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="POST"
+              action="{% url 'order_return_edit' purchase_request.pk %}"
+              id="returnForm">
+
+            {% csrf_token %}
+
+            <!-- 差し戻し情報 -->
+            <div class="content-card">
+
+                <div class="section-title">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    差し戻し情報
+                </div>
+
+                <span class="return-status">差し戻し</span>
+
+                <div class="info-grid">
+
+                    <div>
+                        <div class="info-label">発注ID</div>
+                        <div class="info-value">
+                            PO{{ purchase_request.id }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="info-label">差し戻された日時</div>
+                        <div class="info-value">
+                            {{ purchase_request.updated_at|date:"Y/m/d H:i" }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="info-label">店舗名</div>
+                        <div class="info-value">
+                            {{ store_code }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="info-label">店長名</div>
+                        <div class="info-value">
+                            {{ manager_name }}
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="return-reason">
+
+                    <div class="return-reason-title">
+                        <i class="fa-solid fa-comment-dots"></i>
+                        本社からの差し戻し理由
+                    </div>
+
+                    <p>{{ purchase_request.headquarters_comment|default:"差し戻し理由はありません。" }}</p>
+
+                </div>
+
+            </div>
+
+            <!-- 発注内容 -->
+            <div class="content-card">
+
+                <div class="section-title">
+                    <i class="fa-solid fa-box"></i>
+                    発注内容の確認・修正
+                </div>
+
+                <p style="color:#777; font-size:13px; margin-bottom:18px;">
+                    差し戻された食材のみ表示しています。
+                    再発注しない食材は削除してください。
+                </p>
+
+                <div class="table-wrapper">
+
+                    <table class="order-table">
+
+                        <thead>
+                            <tr>
+                                <th>食材名</th>
+                                <th>発注数量</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="order-items">
+
+                            {% for detail in details %}
+                                <tr>
+                                    <td>
+                                        {{ detail.ingredient }}
+
+                                        <input type="hidden"
+                                               name="selected_detail_ids"
+                                               value="{{ detail.pk }}">
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               class="quantity-input"
+                                               name="quantity_{{ detail.pk }}"
+                                               value="{{ detail.quantity|floatformat:0 }}"
+                                               min="1"
+                                               max="999999"
+                                               step="1"
+                                               required>
+                                    </td>
+
+                                    <td>
+                                        <button type="button"
+                                                class="delete-button"
+                                                onclick="deleteRow(this)">
+                                            削除
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="3">
+                                        差し戻された食材はありません。
+                                    </td>
+                                </tr>
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <!-- 店舗メモ -->
+            <div class="content-card">
+
+                <div class="section-title">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    店舗メモ
+                </div>
+
+                <label class="memo-label" for="store-memo">
+                    本社への連絡事項
+                </label>
+
+                <textarea id="store-memo"
+                          name="note"
+                          class="memo-input"
+                          placeholder="修正した内容や連絡事項を入力してください。">{{ note }}</textarea>
+
+            </div>
+
+            <!-- 注意書き -->
+            <div class="notice">
+                <i class="fa-solid fa-circle-info"></i>
+                発注内容を修正したら、再発注申請を行ってください。
+                申請後は本社で再度確認されます。
+                すべての食材を削除した場合は再発注できません。
+            </div>
+
+            <!-- ボタン -->
+            <div class="button-area">
+
+                <a href="{% url 'store_top' %}"
+                   class="action-button back-button">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    戻る
+                </a>
+
+                <button type="submit"
+                        name="action"
+                        value="decline"
+                        class="action-button decline-button"
+                        onclick="return confirmDecline()">
+                    <i class="fa-solid fa-ban"></i>
+                    再発注しない
+                </button>
+
+                <button type="submit"
+                        name="action"
+                        value="resubmit"
+                        class="action-button submit-button">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    再発注申請する
+                </button>
+
+            </div>
+
+        </form>
+
+    </main>
+
+    <script>
+
+        // 食材を削除
+        function deleteRow(button) {
+            button.closest("tr").remove();
+        }
+
+        // フォーム送信時の確認
+        document.getElementById("returnForm").addEventListener(
+            "submit",
+            function(event) {
+
+                const action = event.submitter
+                    ? event.submitter.value
+                    : "";
+
+                // 再発注しない場合
+                if (action === "decline") {
+                    return;
+                }
+
+                // 再発注する場合
+                if (action === "resubmit") {
+
+                    const rows = document.querySelectorAll(
+                        "#order-items tr"
+                    );
+
+                    if (rows.length === 0) {
+                        event.preventDefault();
+                        alert("再発注する食材がありません。食材を1つ以上残してください。");
+                        return;
+                    }
+
+                    const quantities = document.querySelectorAll(
+                        '#order-items input[type="number"]'
+                    );
+
+                    for (const input of quantities) {
+
+                        const quantity = Number(input.value);
+
+                        if (
+                            input.value === "" ||
+                            !Number.isInteger(quantity) ||
+                            quantity < 1 ||
+                            quantity > 999999
+                        ) {
+                            event.preventDefault();
+                            alert("発注数量は1～999999の整数で入力してください。");
+                            input.focus();
+                            return;
+                        }
+                    }
+
+                    if (!confirm("この内容で再発注申請しますか？")) {
+                        event.preventDefault();
+                    }
+                }
+            }
+        );
+
+        // 再発注しない場合の確認
+        function confirmDecline() {
+            return confirm(
+                "この差し戻し発注を再発注しないことにしますか？"
+            );
+        }
+
+    </script>
+
+</body>
+</html>

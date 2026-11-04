@@ -37,6 +37,7 @@ LOGIN_PORTAL_SESSION_KEY = "login_portal"
 STORE_PORTAL = "store"
 HEADQUARTERS_PORTAL = "headquarters"
 PURCHASE_REQUEST_SESSION_KEY = "stockout_purchase_request_id"
+RESUBMIT_PURCHASE_REQUEST_SESSION_KEY = "resubmit_purchase_request_id"
 
 
 def _format_quantity(value):
@@ -644,6 +645,14 @@ def store_top(request):
             "店舗トップ画面を表示する権限がありません。"
         )
 
+    return_notifications = PurchaseRequest.objects.filter(
+        store_code=profile.store_code.strip(),
+        return_handled=False,
+        details__status=PurchaseRequestDetail.Status.REJECTED,
+    ).distinct().prefetch_related(
+        "details__ingredient"
+    ).order_by("-requested_at", "-pk")
+
     return render(
         request,
         "store.html",
@@ -651,9 +660,9 @@ def store_top(request):
             "is_store_manager": (
                 profile.role == EmployeeProfile.Role.STORE_MANAGER
             ),
+            "return_notifications": return_notifications,
         },
     )
-
 
 @never_cache
 @require_GET
@@ -1899,6 +1908,360 @@ def _purchase_details_to_items(purchase_request):
 
     return items
 
+@never_cache
+@require_http_methods(["GET", "POST"])
+def order_return_edit(request, request_id):
+    """店長が差し戻された食材を修正して再申請する。"""
+    profile, access_response = _check_store_access(
+        request,
+        manager_only=True,
+    )
+
+    if access_response is not None:
+        return access_response
+
+    purchase_request = _get_store_purchase_request(
+        profile,
+        request_id,
+    )
+
+    rejected_details = list(
+        purchase_request.details
+        .filter(status=PurchaseRequestDetail.Status.REJECTED)
+        .select_related("ingredient")
+        .order_by("ingredient__name")
+    )
+
+    # 対応済み、または差し戻し明細がない場合は通知画面に戻す。
+    if (
+        purchase_request.return_handled
+        or not rejected_details
+    ):
+        return redirect("store_top")
+
+    errors = []
+    note = purchase_request.note
+
+    if request.method == "POST":
+        action = request.POST.get("action", "")
+
+        # ------------------------------------------------
+        # 再発注しない場合
+        # ------------------------------------------------
+        if action == "decline":
+            with transaction.atomic():
+                locked_request = (
+                    PurchaseRequest.objects.select_for_update()
+                    .get(
+                        pk=request_id,
+                        store_code=profile.store_code.strip(),
+                    )
+                )
+
+                if locked_request.return_handled:
+                    return redirect("store_top")
+
+                locked_rejected_details = list(
+                    PurchaseRequestDetail.objects.select_for_update()
+                    .filter(
+                        purchase_request=locked_request,
+                        status=PurchaseRequestDetail.Status.REJECTED,
+                    )
+                )
+
+                if not locked_rejected_details:
+                    return redirect("store_top")
+
+                # 差し戻された食材を発注対象から外す。
+                PurchaseRequestDetail.objects.filter(
+                    pk__in=[
+                        detail.pk
+                        for detail in locked_rejected_details
+                    ]
+                ).delete()
+
+                # 承認済み食材が残っていれば、その承認状態を維持する。
+                remaining_details = (
+                    PurchaseRequestDetail.objects.filter(
+                        purchase_request=locked_request
+                    )
+                )
+
+                if remaining_details.exists():
+                    locked_request.status = (
+                        PurchaseRequest.Status.APPROVED
+                    )
+                else:
+                    locked_request.status = (
+                        PurchaseRequest.Status.CANCELLED
+                    )
+
+                locked_request.return_handled = True
+
+                locked_request.save(
+                    update_fields=[
+                        "status",
+                        "return_handled",
+                        "updated_at",
+                    ]
+                )
+
+            return redirect("store_top")
+
+        # ------------------------------------------------
+        # 再発注申請する場合
+        # ------------------------------------------------
+        elif action == "resubmit":
+            note = request.POST.get("note", "").strip()
+
+            raw_selected_ids = request.POST.getlist(
+                "selected_detail_ids"
+            )
+
+            try:
+                selected_ids_list = [
+                    int(detail_id)
+                    for detail_id in raw_selected_ids
+                ]
+
+                selected_ids = set(selected_ids_list)
+
+                if len(selected_ids) != len(selected_ids_list):
+                    errors.append(
+                        "同じ食材が重複して選択されています。"
+                    )
+
+            except (TypeError, ValueError):
+                selected_ids = set()
+                errors.append(
+                    "食材の選択内容が正しくありません。"
+                )
+
+            if not selected_ids:
+                errors.append(
+                    "再発注する食材を1つ以上選択してください。"
+                )
+
+            rejected_ids = {
+                detail.pk for detail in rejected_details
+            }
+
+            if not selected_ids.issubset(rejected_ids):
+                errors.append(
+                    "再発注する食材の指定が正しくありません。"
+                )
+
+            validated_details = []
+
+            for detail in rejected_details:
+                if detail.pk not in selected_ids:
+                    continue
+
+                field_name = f"quantity_{detail.pk}"
+                raw_quantity = request.POST.get(
+                    field_name,
+                    "",
+                ).strip()
+
+                detail.input_quantity = raw_quantity
+
+                try:
+                    quantity = Decimal(raw_quantity)
+
+                    if (
+                        not quantity.is_finite()
+                        or quantity < Decimal("1")
+                        or quantity > Decimal("999999")
+                        or quantity
+                        != quantity.to_integral_value()
+                    ):
+                        raise InvalidOperation
+
+                except (InvalidOperation, ValueError):
+                    errors.append(
+                        f"{detail.ingredient.name}の数量は"
+                        "1～999999の整数で入力してください。"
+                    )
+                    continue
+
+                validated_details.append(
+                    {
+                        "detail": detail,
+                        "quantity": quantity,
+                    }
+                )
+
+            if (
+                not errors
+                and len(validated_details) != len(selected_ids)
+            ):
+                errors.append(
+                    "数量の入力内容を確認してください。"
+                )
+
+            if not errors:
+                with transaction.atomic():
+                    locked_request = (
+                        PurchaseRequest.objects.select_for_update()
+                        .get(
+                            pk=request_id,
+                            store_code=profile.store_code.strip(),
+                        )
+                    )
+
+                    if locked_request.return_handled:
+                        return redirect("store_top")
+
+                    locked_rejected_details = list(
+                        PurchaseRequestDetail.objects.select_for_update()
+                        .filter(
+                            purchase_request=locked_request,
+                            status=PurchaseRequestDetail.Status.REJECTED,
+                        )
+                    )
+
+                    locked_rejected_ids = {
+                        detail.pk
+                        for detail in locked_rejected_details
+                    }
+
+                    if not selected_ids.issubset(
+                        locked_rejected_ids
+                    ):
+                        errors.append(
+                            "差し戻し内容が変更されています。"
+                            "画面を開き直してください。"
+                        )
+                    else:
+                        # 画面から削除された食材をDBから削除する。
+                        PurchaseRequestDetail.objects.filter(
+                            purchase_request=locked_request,
+                            status=PurchaseRequestDetail.Status.REJECTED,
+                        ).exclude(
+                            pk__in=selected_ids
+                        ).delete()
+
+                        # 選択された食材の数量と状態を更新する。
+                        locked_detail_by_id = {
+                            detail.pk: detail
+                            for detail in locked_rejected_details
+                        }
+
+                        for item in validated_details:
+                            detail = locked_detail_by_id[
+                                item["detail"].pk
+                            ]
+
+                            detail.quantity = item["quantity"]
+                            detail.status = (
+                                PurchaseRequestDetail.Status.PENDING
+                            )
+
+                        PurchaseRequestDetail.objects.bulk_update(
+                            [
+                                locked_detail_by_id[item["detail"].pk]
+                                for item in validated_details
+                            ],
+                            ["quantity", "status"],
+                        )
+
+                        # 親の発注申請を再び本社の確認待ちにする。
+                        locked_request.note = note
+                        locked_request.status = (
+                            PurchaseRequest.Status.PENDING
+                        )
+                        locked_request.headquarters_comment = ""
+                        locked_request.return_handled = True
+
+                        locked_request.save(
+                            update_fields=[
+                                "note",
+                                "status",
+                                "headquarters_comment",
+                                "return_handled",
+                                "updated_at",
+                            ]
+                        )
+
+                        request.session[
+                            RESUBMIT_PURCHASE_REQUEST_SESSION_KEY
+                        ] = locked_request.pk
+
+                        return redirect("order_resubmit_complete")
+
+            # 入力エラーがある場合は入力内容を保持して再表示する。
+            for detail in rejected_details:
+                if not hasattr(detail, "input_quantity"):
+                    detail.input_quantity = str(detail.quantity)
+
+        else:
+            errors.append("不正な操作です。")
+
+    else:
+        for detail in rejected_details:
+            detail.input_quantity = str(detail.quantity)
+
+    return render(
+        request,
+        "order_return_edit.html",
+        {
+            "purchase_request": purchase_request,
+            "details": rejected_details,
+            "store_code": profile.store_code.strip(),
+            "manager_name": _get_manager_name(profile),
+            "errors": errors,
+            "note": note,
+        },
+    )
+
+@never_cache
+@require_GET
+def order_resubmit_complete(request):
+    """店長が再申請した発注内容を完了画面に表示する。"""
+    profile, access_response = _check_store_access(
+        request,
+        manager_only=True,
+    )
+
+    if access_response is not None:
+        return access_response
+
+    purchase_request_id = request.session.pop(
+        RESUBMIT_PURCHASE_REQUEST_SESSION_KEY,
+        None,
+    )
+
+    if not purchase_request_id:
+        return redirect("order_history")
+
+    purchase_request = (
+        PurchaseRequest.objects.filter(
+            pk=purchase_request_id,
+            store_code=profile.store_code.strip(),
+            requested_by=profile,
+            status=PurchaseRequest.Status.PENDING,
+        )
+        .prefetch_related("details__ingredient")
+        .first()
+    )
+
+    if purchase_request is None:
+        return redirect("order_history")
+
+    return render(
+        request,
+        "order_application_complete.html",
+        {
+            "purchase_request": purchase_request,
+            "details": purchase_request.details.all().order_by(
+                "ingredient__name"
+            ),
+            "store_code": profile.store_code.strip(),
+            "manager_name": _get_manager_name(profile),
+            "today": timezone.localdate(),
+            "is_resubmission": True,
+        },
+    )
 
 @never_cache
 @require_GET
@@ -2183,118 +2546,188 @@ def order(request):
 @never_cache
 @require_http_methods(["GET", "POST"])
 def order_detail(request, request_id):
-    """本社側で発注内容を確認し、確定または差し戻しを行う。"""
-    access_response = _check_headquarters_access(request)
+    """本社管理者が発注内容を確認し、食材ごとに承認・差し戻しを行う。"""
+    access = _check_headquarters_access(request)
 
-    if access_response is not None:
-        return access_response
+    if access is not None:
+        return access
 
     purchase_request = get_object_or_404(
-        PurchaseRequest.objects
-        .select_related("requested_by", "requested_by__user")
+        PurchaseRequest.objects.select_related("requested_by__user")
         .prefetch_related("details__ingredient"),
         pk=request_id,
     )
 
     errors = []
+    headquarters_comment = ""
+    selected_ids = set()
 
     if request.method == "POST":
-        action = request.POST.get("action", "").strip()
+        action = request.POST.get("action")
 
-        if purchase_request.status != PurchaseRequest.Status.PENDING:
-            return redirect(
-                f"{reverse('order_detail', kwargs={'request_id': purchase_request.pk})}"
-                "?result=already_processed"
+        headquarters_comment = request.POST.get(
+            "headquarters_comment",
+            "",
+        ).strip()
+
+        if action != "process":
+            errors.append("不正な操作です。")
+
+        elif purchase_request.status != PurchaseRequest.Status.PENDING:
+            return redirect("order")
+
+        else:
+            raw_selected_ids = request.POST.getlist(
+                "selected_detail_ids"
             )
 
-        if action == "approve":
-            with transaction.atomic():
-                locked_request = get_object_or_404(
-                    PurchaseRequest.objects.select_for_update(),
-                    pk=request_id,
-                )
+            try:
+                selected_ids_list = [
+                    int(detail_id)
+                    for detail_id in raw_selected_ids
+                ]
 
-                if (
-                    locked_request.status
-                    != PurchaseRequest.Status.PENDING
-                ):
-                    return redirect(
-                        f"{reverse('order_detail', kwargs={'request_id': request_id})}"
-                        "?result=already_processed"
+                selected_ids = set(selected_ids_list)
+
+                if len(selected_ids) != len(selected_ids_list):
+                    errors.append(
+                        "同じ食材が重複して選択されています。"
                     )
 
-                locked_request.status = PurchaseRequest.Status.APPROVED
-                locked_request.headquarters_comment = ""
-                locked_request.save(
-                    update_fields=[
-                        "status",
-                        "headquarters_comment",
-                        "updated_at",
-                    ]
-                )
-
-            return redirect(
-                f"{reverse('order_complete')}?result=approved"
-                f"&request_id={purchase_request.pk}"
-            )
-
-        if action == "reject":
-            comment = request.POST.get(
-                "headquarters_comment",
-                "",
-            ).strip()
-
-            if not comment:
-                errors.append("差し戻し理由を入力してください。")
-            elif len(comment) > 2000:
+            except (TypeError, ValueError):
                 errors.append(
-                    "差し戻し理由は2000文字以内で入力してください。"
+                    "食材の選択内容が正しくありません。"
                 )
-            else:
+
+            if len(headquarters_comment) > 1000:
+                errors.append(
+                    "差し戻し理由は1000文字以内で入力してください。"
+                )
+
+            if selected_ids and not headquarters_comment:
+                errors.append(
+                    "差し戻す食材がある場合は、差し戻し理由を入力してください。"
+                )
+
+            if not errors:
                 with transaction.atomic():
-                    locked_request = get_object_or_404(
-                        PurchaseRequest.objects.select_for_update(),
-                        pk=request_id,
+                    locked_request = (
+                        PurchaseRequest.objects.select_for_update()
+                        .get(pk=request_id)
                     )
 
                     if (
                         locked_request.status
                         != PurchaseRequest.Status.PENDING
                     ):
-                        return redirect(
-                            f"{reverse('order_detail', kwargs={'request_id': request_id})}"
-                            "?result=already_processed"
-                        )
+                        return redirect("order")
 
-                    locked_request.status = PurchaseRequest.Status.REJECTED
-                    locked_request.headquarters_comment = comment
-                    locked_request.save(
-                        update_fields=[
-                            "status",
-                            "headquarters_comment",
-                            "updated_at",
-                        ]
+                    # 審査待ちの明細だけを取得する。
+                    pending_details = list(
+                        PurchaseRequestDetail.objects.select_for_update()
+                        .filter(
+                            purchase_request=locked_request,
+                            status=PurchaseRequestDetail.Status.PENDING,
+                        )
                     )
 
-                return redirect(
-                    f"{reverse('order_complete')}?result=rejected"
-                    f"&request_id={purchase_request.pk}"
-                )
+                    pending_ids = {
+                        detail.pk
+                        for detail in pending_details
+                    }
 
-        else:
-            errors.append("操作内容が正しくありません。")
+                    if not pending_details:
+                        errors.append(
+                            "審査待ちの食材がありません。"
+                        )
 
-    result = request.GET.get("result", "")
+                    elif not selected_ids.issubset(pending_ids):
+                        errors.append(
+                            "食材の選択内容が正しくありません。"
+                            "画面を開き直してください。"
+                        )
 
-    if result == "already_processed":
-        errors.append(
-            "この発注はすでに処理されています。最新の状態を確認してください。"
-        )
+                    else:
+                        rejected_count = 0
+
+                        for detail in pending_details:
+                            if detail.pk in selected_ids:
+                                detail.status = (
+                                    PurchaseRequestDetail.Status.REJECTED
+                                )
+                                rejected_count += 1
+                            else:
+                                detail.status = (
+                                    PurchaseRequestDetail.Status.APPROVED
+                                )
+
+                        # 今回審査した明細だけを更新する。
+                        PurchaseRequestDetail.objects.bulk_update(
+                            pending_details,
+                            ["status"],
+                        )
+
+                        # すべての明細の状態を確認する。
+                        all_details = list(
+                            PurchaseRequestDetail.objects.filter(
+                                purchase_request=locked_request
+                            )
+                        )
+
+                        approved_exists = any(
+                            detail.status
+                            == PurchaseRequestDetail.Status.APPROVED
+                            for detail in all_details
+                        )
+
+                        rejected_exists = any(
+                            detail.status
+                            == PurchaseRequestDetail.Status.REJECTED
+                            for detail in all_details
+                        )
+
+                        # すべて差し戻しの場合だけ親をREJECTEDにする。
+                        if rejected_exists and not approved_exists:
+                            locked_request.status = (
+                                PurchaseRequest.Status.REJECTED
+                            )
+                            result = "rejected"
+                        else:
+                            locked_request.status = (
+                                PurchaseRequest.Status.APPROVED
+                            )
+                            result = "approved"
+
+                        # 差し戻しがある場合は理由を保存する。
+                        locked_request.headquarters_comment = (
+                            headquarters_comment
+                            if rejected_exists
+                            else ""
+                        )
+
+                        # 差し戻しがある場合は店舗側に通知する。
+                        locked_request.return_handled = (
+                            not rejected_exists
+                        )
+
+                        locked_request.save(
+                            update_fields=[
+                                "status",
+                                "headquarters_comment",
+                                "return_handled",
+                                "updated_at",
+                            ]
+                        )
+
+                        return redirect(
+                            f"{reverse('order_complete')}?result={result}"
+                            f"&request_id={request_id}"
+                        )
 
     details = (
         purchase_request.details
         .select_related("ingredient")
-        .order_by("ingredient__name")
+        .all()
     )
 
     return render(
@@ -2304,21 +2737,13 @@ def order_detail(request, request_id):
             "purchase_request": purchase_request,
             "details": details,
             "errors": errors,
-            "headquarters_comment": (
-                request.POST.get(
-                    "headquarters_comment",
-                    purchase_request.headquarters_comment,
-                )
-                if request.method == "POST"
-                else purchase_request.headquarters_comment
-            ),
+            "headquarters_comment": headquarters_comment,
+            "selected_detail_ids": selected_ids,
             "can_process": (
-                purchase_request.status
-                == PurchaseRequest.Status.PENDING
+                purchase_request.status == PurchaseRequest.Status.PENDING
             ),
         },
     )
-
 
 @never_cache
 @require_GET

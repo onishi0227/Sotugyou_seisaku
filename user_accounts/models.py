@@ -1,3 +1,4 @@
+
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -391,6 +392,10 @@ class PurchaseRequest(models.Model):
         blank=True,
         verbose_name="本社コメント",
     )
+    return_handled = models.BooleanField(
+        default=False,
+        verbose_name="差し戻し対応済み",
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name="作成日時",
@@ -411,6 +416,11 @@ class PurchaseRequest(models.Model):
 
 class PurchaseRequestDetail(models.Model):
     """発注申請に含まれる食材と申請数量を保存する。"""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "未処理"
+        REJECTED = "rejected", "差し戻し"
+        APPROVED = "approved", "確定"
 
     purchase_request = models.ForeignKey(
         PurchaseRequest,
@@ -437,6 +447,13 @@ class PurchaseRequestDetail(models.Model):
         null=True,
         blank=True,
         verbose_name="申請時推奨数量",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+        verbose_name="明細状態",
     )
 
     class Meta:
