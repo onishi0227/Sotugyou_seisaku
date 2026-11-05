@@ -220,7 +220,7 @@
 
                             {% if row.stocktake %}
                                 <td>
-                                    {{ row.stocktake.actual_quantity }}
+                                    {{ row.stocktake.actual_quantity|floatformat:"-2" }}
                                     {{ row.ingredient.unit }}
                                 </td>
 
