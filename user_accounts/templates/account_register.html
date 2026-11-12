@@ -207,9 +207,15 @@
                 </form>
 
                 <div class="back-link">
-                    <a href="{% url 'headquarters_master' %}">
-                        戻る
-                    </a>
+                    {% if can_choose_store %}
+                        <a href="{% url 'headquarters_master' %}">
+                            戻る
+                        </a>
+                    {% else %}
+                        <a href="{% url 'staff_management' %}">
+                            戻る
+                        </a>
+                    {% endif %}
                 </div>
 
             </div>

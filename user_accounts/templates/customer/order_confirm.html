@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注文内容の確認</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Meiryo", sans-serif;
+            background-color: #f7f7f7;
+            color: #333;
+            padding-bottom: 100px;
+        }
+
+        header {
+            background-color: #fff;
+            padding: 18px 16px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        header h1 {
+            margin: 0 0 8px;
+            font-size: 22px;
+        }
+
+        .table-number {
+            color: #666;
+            font-size: 14px;
+        }
+
+        main {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .section-title {
+            font-size: 17px;
+            margin: 8px 0 14px;
+        }
+
+        .order-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .order-item {
+            background-color: #fff;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 7px #0000000d;
+        }
+
+        .item-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .item-detail {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .subtotal {
+            font-size: 16px;
+            font-weight: bold;
+            color: #c86b42;
+            white-space: nowrap;
+        }
+
+        .total-area {
+            margin-top: 20px;
+            padding: 20px 16px;
+            background: #fff;
+            border-radius: 12px;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .total-label {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .total-price {
+            font-size: 25px;
+            font-weight: bold;
+            color: #c86b42;
+        }
+
+        .empty-message {
+            background: #fff;
+            padding: 28px 16px;
+            border-radius: 12px;
+            text-align: center;
+            color: #777;
+            line-height: 1.8;
+        }
+
+        .bottom-area {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 12px 16px;
+            background: #fff;
+            border-top: 1px solid #ddd;
+        }
+
+        .bottom-inner {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            gap: 10px;
+        }
+
+        .button {
+            flex: 1;
+            padding: 14px 8px;
+            border-radius: 9px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .back-button {
+            color: #555;
+            background: #fff;
+            border: 1px solid #ccc;
+        }
+
+        .order-button {
+            color: #fff;
+            background: #c86b42;
+            border: none;
+        }
+
+        .order-button:disabled {
+            background: #ccc;
+            cursor: default;
+        }
+
+        @media (max-width: 360px) {
+            main {
+                padding: 10px;
+            }
+
+            .bottom-inner {
+                gap: 8px;
+            }
+
+            .button {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>注文内容の確認</h1>
+        <div class="table-number">
+            テーブル番号：{{ table_no }}
+        </div>
+    </header>
+
+    <main>
+        <h2 class="section-title">ご注文の商品</h2>
+
+    <div class="order-list">
+        {% for line in order_lines %}
+            <div class="order-item">
+                <div class="item-name">
+                    {{ line.product.name }}
+                </div>
+
+                <div class="item-detail">
+                    <span>
+                        ¥{{ line.product.price|floatformat:0 }} × {{ line.quantity }}点
+                    </span>
+
+                    <span class="subtotal">
+                        ¥{{ line.subtotal|floatformat:0 }}
+                    </span>
+                </div>
+            </div>
+        {% empty %}
+            <div class="empty-message">
+                注文する商品がありません。メニュー画面から商品を選んでください。
+            </div>
+        {% endfor %}
+    </div>
+
+        <div class="total-area">
+            <div class="total-row">
+                <span class="total-label">合計金額</span>
+                <span class="total-price">¥{{ total_price|floatformat:0 }}</span>
+            </div>
+        </div>
+    </main>
+
+    <div class="bottom-area">
+        <div class="bottom-inner">
+            <a
+                href="{% url 'customer_order' store_id=store_id table_no=table_no %}"
+                class="button back-button"
+            >
+                メニューに戻る
+            </a>
+
+            <form
+                method="POST"
+                action="{% url 'customer_order_submit' store_id=store_id table_no=table_no %}"
+                style="flex: 1; display: flex;"
+            >
+                {% csrf_token %}
+
+                <button
+                    type="submit"
+                    class="button order-button"
+                    style="width: 100%;"
+                    {% if not order_lines %}disabled{% endif %}
+                >
+                    注文する
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,246 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>お会計内容</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Meiryo", sans-serif;
+            background-color: #f7f7f7;
+            color: #333;
+        }
+
+        header {
+            background-color: #fff;
+            padding: 18px 16px;
+            text-align: center;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        .table-number {
+            margin-top: 8px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        main {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px 16px 110px;
+        }
+
+        .section {
+            background-color: #fff;
+            padding: 20px;
+            margin-bottom: 16px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .section h2 {
+            margin: 0 0 16px;
+            font-size: 18px;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+
+        .item-name {
+            flex: 1;
+            line-height: 1.6;
+        }
+
+        .item-price {
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .empty-message {
+            color: #777;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 18px;
+            font-weight: bold;
+        }
+
+        .total-label {
+            font-size: 17px;
+        }
+
+        .total-price {
+            font-size: 25px;
+            color: #d35400;
+        }
+
+        .notice {
+            color: #777;
+            font-size: 12px;
+            line-height: 1.6;
+            margin-top: 12px;
+        }
+
+        .bottom-area {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #fff;
+            padding: 14px 16px;
+            border-top: 1px solid #eee;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .bottom-inner {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .confirm-button,
+        .back-button {
+            width: 100%;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .confirm-button {
+            padding: 16px;
+            border: none;
+            background-color: #d97736;
+            color: white;
+            font-size: 16px;
+        }
+
+        .confirm-button:active {
+            background-color: #b85e24;
+        }
+
+        .back-button {
+            display: block;
+            margin-top: 10px;
+            padding: 12px;
+            border: 1px solid #ccc;
+            background-color: white;
+            color: #444;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>お会計内容</h1>
+    <div class="table-number">
+        テーブル <span id="tableNumber">{{ table_no }}</span>
+    </div>
+</header>
+
+<main>
+    <section class="section">
+        <h2>ご注文内容</h2>
+
+        <div id="orderItems">
+
+            {% for item in checkout_items %}
+            <div class="order-item">
+                <div class="item-name">
+                    {{ item.name }} × {{ item.quantity }}
+                </div>
+
+                <div class="item-price">
+                    {{ item.subtotal|floatformat:0 }}円
+                </div>
+            </div>
+            {% empty %}
+            <p class="empty-message">
+                注文内容がありません。注文履歴を確認してください。
+            </p>
+            {% endfor %}
+
+        </div>
+
+        <div class="total-row">
+            <span class="total-label">お支払い合計</span>
+            <span class="total-price" id="totalPrice">
+                {{ total_price|floatformat:0 }}円
+            </span>
+        </div>
+
+        <p class="notice">
+            ※ご注文内容と合計金額をご確認ください。
+        </p>
+    </section>
+</main>
+
+<div class="bottom-area">
+    <div class="bottom-inner">
+
+        <form
+            id="checkoutForm"
+            method="post"
+            action="{% url 'customer_checkout' store_id=store_id table_no=table_no %}"
+        >
+            {% csrf_token %}
+
+            <button type="submit" class="confirm-button"
+                    id="confirmButton">
+                確認しました
+            </button>
+        </form>
+
+        <button type="button" class="back-button"
+                id="backButton">
+            注文履歴に戻る
+        </button>
+
+    </div>
+</div>
+
+<script>
+    // 注文履歴へ戻る
+    document.getElementById("backButton").addEventListener(
+        "click",
+        () => {
+            location.href =
+                "{% url 'customer_order_history' store_id=store_id table_no=table_no %}";
+        }
+    );
+
+    // 二重送信防止
+    document.getElementById("checkoutForm").addEventListener(
+        "submit",
+        () => {
+            document.getElementById("confirmButton").disabled = true;
+        }
+    );
+</script>
+
+</body>
+</html>

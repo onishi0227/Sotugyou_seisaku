@@ -337,7 +337,6 @@
                                             value="{% if not item.is_normal_order %}{% firstof item.order_quantity item.recommended_quantity_raw item.recommended_quantity %}{% endif %}"
                                             placeholder="発注数を入力"
                                             aria-label="{% firstof item.ingredient_name item.name item.ingredient.name %}の発注数"
-                                            required
                                         >
                                     </td>
                                 </tr>

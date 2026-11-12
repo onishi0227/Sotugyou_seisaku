@@ -304,6 +304,11 @@ class CustomerOrder(models.Model):
     table_no = models.PositiveIntegerField(
         verbose_name="テーブル番号",
     )
+    is_checked_out = models.BooleanField(
+        default=False,
+        db_index=True,
+        verbose_name="会計済み",
+    )
     ordered_at = models.DateTimeField(
         default=timezone.now,
         db_index=True,

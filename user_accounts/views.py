@@ -1334,19 +1334,76 @@ def recipe_register(request):
 
 @require_GET
 def customer_order(request, store_id, table_no):
-    """QRコードから開くお客様用画面。ログインは不要。"""
+    """QRコードから開くお客様用メニュー画面。ログイン不要。"""
+
     request.session["store_id"] = store_id
     request.session["table_no"] = table_no
 
+    products = MenuItem.objects.filter(
+        store_id=store_id,
+        is_available=True,
+    ).order_by("sort_order", "id")
+
     return render(
         request,
-        "customer.html",
+        "customer/menu.html",
         {
             "store_id": store_id,
             "table_no": table_no,
+            "products": products,
         },
     )
 
+@never_cache
+@require_GET
+def customer_order_history(request, store_id, table_no):
+    """同じ店舗・テーブルのお客様の注文履歴を表示する。"""
+
+    orders = CustomerOrder.objects.filter(
+        store_id=store_id,
+        table_no=table_no,
+    ).prefetch_related(
+        "details__menu_item"
+    ).order_by(
+        "-ordered_at",
+        "-id",
+    )
+
+    history_orders = []
+
+    for order in orders:
+        order_lines = []
+        total_price = 0
+
+        for detail in order.details.all():
+            price = detail.menu_item.price
+            quantity = detail.quantity
+            subtotal = price * quantity
+
+            total_price += subtotal
+
+            order_lines.append({
+                "name": detail.menu_item.name,
+                "price": price,
+                "quantity": quantity,
+                "subtotal": subtotal,
+            })
+
+        history_orders.append({
+            "order": order,
+            "order_lines": order_lines,
+            "total_price": total_price,
+        })
+
+    return render(
+        request,
+        "customer/order_history3.html",
+        {
+            "store_id": store_id,
+            "table_no": table_no,
+            "history_orders": history_orders,
+        },
+    )
 
 @require_GET
 def customer_menu(request, store_id, table_no):
@@ -1374,10 +1431,258 @@ def customer_menu(request, store_id, table_no):
         },
     )
 
+@never_cache
+@require_GET
+def customer_checkout_page(request, store_id, table_no):
+    """未会計注文の内容を表示する。"""
 
-@require_http_methods(["POST"])
-def customer_order_submit(request, store_id, table_no):
-    """お客様が選択したメニューと数量を注文として保存する。"""
+    orders = CustomerOrder.objects.filter(
+        store_id=store_id,
+        table_no=table_no,
+        is_checked_out=False,
+    ).prefetch_related(
+        "details__menu_item"
+    ).order_by(
+        "ordered_at",
+        "id",
+    )
+
+    checkout_items = []
+    total_price = Decimal("0")
+
+    for order in orders:
+        for detail in order.details.all():
+            price = detail.menu_item.price
+            quantity = detail.quantity
+            subtotal = price * quantity
+
+            checkout_items.append({
+                "name": detail.menu_item.name,
+                "price": price,
+                "quantity": quantity,
+                "subtotal": subtotal,
+            })
+
+            total_price += subtotal
+
+    return render(
+        request,
+        "customer/payment.html",
+        {
+            "store_id": store_id,
+            "table_no": table_no,
+            "checkout_items": checkout_items,
+            "total_price": total_price,
+        },
+    )
+
+@never_cache
+@require_POST
+def customer_checkout(request, store_id, table_no):
+    """テーブルの未会計注文をまとめて処理し、理論在庫を減算する。"""
+
+    history_url = reverse(
+        "customer_order_history",
+        kwargs={
+            "store_id": store_id,
+            "table_no": table_no,
+        },
+    )
+
+    with transaction.atomic():
+
+        # 未会計注文をロックして取得
+        orders = list(
+            CustomerOrder.objects.select_for_update().filter(
+                store_id=store_id,
+                table_no=table_no,
+                is_checked_out=False,
+            ).order_by("id")
+        )
+
+        # 未会計注文がなければ終了
+        if not orders:
+            return redirect(
+                f"{history_url}?checkout=none"
+            )
+
+        # 店舗IDに対応する店舗コードを取得
+        raw_store_codes = EmployeeProfile.objects.exclude(
+            store_code=""
+        ).values_list(
+            "store_code",
+            flat=True,
+        ).distinct()
+
+        matched_store_codes = {
+            code.strip()
+            for code in raw_store_codes
+            if code.strip()
+            and _get_store_id_from_code(code) == store_id
+        }
+
+        # 対応する店舗コードが一意でなければ中止
+        if len(matched_store_codes) != 1:
+            return redirect(
+                f"{history_url}?checkout=missing_store"
+            )
+
+        store_code = matched_store_codes.pop()
+
+        # 注文明細を取得
+        details = list(
+            OrderDetail.objects.filter(
+                order__in=orders
+            ).select_related(
+                "menu_item"
+            )
+        )
+
+        # 明細がない注文は処理しない
+        if not details:
+            return redirect(
+                f"{history_url}?checkout=missing_recipe"
+            )
+
+        # 会計金額を計算
+        total_price = sum(
+            (
+                detail.menu_item.price * detail.quantity
+                for detail in details
+            ),
+            Decimal("0"),
+        )
+
+        # 注文されたメニューを取得
+        menu_ids = {
+            detail.menu_item_id
+            for detail in details
+        }
+
+        # 注文されたメニューが対象店舗の商品か確認
+        valid_menu_ids = set(
+            MenuItem.objects.filter(
+                pk__in=menu_ids,
+                store_id=store_id,
+            ).values_list(
+                "pk",
+                flat=True,
+            )
+        )
+
+        if valid_menu_ids != menu_ids:
+            return redirect(
+                f"{history_url}?checkout=missing_recipe"
+            )
+
+        # 注文されたメニューのレシピを取得
+        recipes = list(
+            Recipe.objects.filter(
+                menu_item_id__in=menu_ids,
+            ).select_related(
+                "ingredient"
+            )
+        )
+
+        recipes_by_menu = {}
+
+        for recipe in recipes:
+            recipes_by_menu.setdefault(
+                recipe.menu_item_id,
+                [],
+            ).append(recipe)
+
+        # レシピがないメニューがあれば中止
+        for menu_id in menu_ids:
+            if not recipes_by_menu.get(menu_id):
+                return redirect(
+                    f"{history_url}?checkout=missing_recipe"
+                )
+
+        # 食材ごとの使用量を集計
+        usage_by_ingredient = {}
+
+        for detail in details:
+            for recipe in recipes_by_menu[detail.menu_item_id]:
+
+                used_quantity = (
+                    recipe.quantity
+                    * Decimal(detail.quantity)
+                )
+
+                ingredient_id = recipe.ingredient_id
+
+                usage_by_ingredient[ingredient_id] = (
+                    usage_by_ingredient.get(
+                        ingredient_id,
+                        Decimal("0"),
+                    )
+                    + used_quantity
+                )
+
+        # 対象店舗の理論在庫をロックして取得
+        stocks = list(
+            TheoreticalStock.objects.select_for_update().filter(
+                store_code=store_code,
+                ingredient_id__in=usage_by_ingredient.keys(),
+            )
+        )
+
+        stock_by_ingredient = {
+            stock.ingredient_id: stock
+            for stock in stocks
+        }
+
+        # 在庫情報がない食材があれば中止
+        if (
+            len(stocks) != len(usage_by_ingredient)
+            or len(stock_by_ingredient) != len(usage_by_ingredient)
+        ):
+            return redirect(
+                f"{history_url}?checkout=missing_stock"
+            )
+
+        # 在庫不足チェックは行わず、使用量を減算する
+        # 在庫数がマイナスになることも許可する
+        for ingredient_id, used_quantity in usage_by_ingredient.items():
+
+            stock = stock_by_ingredient[ingredient_id]
+
+            stock.quantity -= used_quantity
+
+            stock.save(
+                update_fields=[
+                    "quantity",
+                    "updated_at",
+                ]
+            )
+
+        # 対象注文を会計済みにする
+        CustomerOrder.objects.filter(
+            pk__in=[
+                order.pk
+                for order in orders
+            ]
+        ).update(
+            is_checked_out=True
+        )
+
+    # 会計確定後、レジ案内画面を表示
+    return render(
+        request,
+        "customer/payment_complete1.html",
+        {
+            "store_id": store_id,
+            "table_no": table_no,
+            "total_price": total_price,
+        },
+    )
+
+@never_cache
+@require_http_methods(["GET", "POST"])
+def customer_order_confirm(request, store_id, table_no):
+    """お客様が選択した商品を注文確認画面に表示する。"""
+
     request.session["store_id"] = store_id
     request.session["table_no"] = table_no
 
@@ -1389,64 +1694,219 @@ def customer_order_submit(request, store_id, table_no):
     )
 
     errors = []
-    quantities = {}
+
+    if request.method == "POST":
+        order_lines = []
+        quantities = {}
+
+        if not products:
+            errors.append("現在、販売中の商品はありません。")
+
+        for product in products:
+            field_name = f"quantity_{product.pk}"
+            raw_quantity = request.POST.get(field_name, "0").strip()
+
+            if raw_quantity == "":
+                raw_quantity = "0"
+
+            try:
+                quantity = Decimal(raw_quantity)
+
+                if (
+                    not quantity.is_finite()
+                    or quantity < 0
+                    or quantity != quantity.to_integral_value()
+                    or quantity > 99
+                ):
+                    raise InvalidOperation
+
+            except (InvalidOperation, ValueError):
+                errors.append(
+                    f"{product.name}の数量は0～99の整数で入力してください。"
+                )
+                quantities[product.pk] = raw_quantity
+                continue
+
+            quantity_int = int(quantity)
+            quantities[product.pk] = quantity_int
+
+            if quantity_int > 0:
+                order_lines.append(
+                    {
+                        "menu_item_id": product.pk,
+                        "quantity": quantity_int,
+                    }
+                )
+
+        if products and not errors and not order_lines:
+            errors.append("注文する商品を1つ以上選択してください。")
+
+        for product in products:
+            product.order_quantity = quantities.get(product.pk, 0)
+
+        if errors:
+            return render(
+                request,
+                "customer/menu.html",
+                {
+                    "store_id": store_id,
+                    "table_no": table_no,
+                    "products": products,
+                    "errors": errors,
+                },
+            )
+
+        request.session["customer_order_lines"] = order_lines
+
+        return redirect(
+            "customer_order_confirm",
+            store_id=store_id,
+            table_no=table_no,
+        )
+
+    saved_lines = request.session.get("customer_order_lines", [])
+
+    if not saved_lines:
+        return redirect(
+            "customer_order",
+            store_id=store_id,
+            table_no=table_no,
+        )
+
+    product_ids = [
+        line["menu_item_id"]
+        for line in saved_lines
+    ]
+
+    selected_products = MenuItem.objects.filter(
+        store_id=store_id,
+        is_available=True,
+        pk__in=product_ids,
+    )
+
+    product_dict = {
+        product.pk: product
+        for product in selected_products
+    }
+
     order_lines = []
 
-    if not products:
-        errors.append("現在、販売中の商品はありません。")
+    for line in saved_lines:
+        product = product_dict.get(line["menu_item_id"])
 
-    for product in products:
-        field_name = f"quantity_{product.pk}"
-        raw_quantity = request.POST.get(
-            field_name,
-            "0",
-        ).strip()
-
-        if raw_quantity == "":
-            raw_quantity = "0"
-
-        try:
-            quantity = Decimal(raw_quantity)
-
-            if (
-                not quantity.is_finite()
-                or quantity < 0
-                or quantity != quantity.to_integral_value()
-                or quantity > 99
-            ):
-                raise InvalidOperation
-
-        except (InvalidOperation, ValueError):
+        if product is None:
             errors.append(
-                f"{product.name}の数量は0～99の整数で入力してください。"
+                "選択した商品の一部が販売終了になっています。"
             )
-            quantities[product.pk] = raw_quantity
             continue
 
-        quantity_int = int(quantity)
-        quantities[product.pk] = quantity_int
+        quantity = line["quantity"]
 
-        if quantity_int > 0:
-            order_lines.append((product, quantity_int))
-
-    if products and not errors and not order_lines:
-        errors.append("注文する商品を1つ以上選択してください。")
-
-    for product in products:
-        product.order_quantity = quantities.get(product.pk, 0)
+        order_lines.append(
+            {
+                "product": product,
+                "quantity": quantity,
+                "subtotal": product.price * quantity,
+            }
+        )
 
     if errors:
-        return render(
-            request,
-            "product_list.html",
-            {
-                "store_id": store_id,
-                "table_no": table_no,
-                "products": products,
-                "errors": errors,
-                "order_success": False,
-                "order_id": "",
-            },
+        request.session.pop("customer_order_lines", None)
+
+        return redirect(
+            "customer_order",
+            store_id=store_id,
+            table_no=table_no,
+        )
+
+    total_price = sum(
+        line["subtotal"]
+        for line in order_lines
+    )
+
+    return render(
+        request,
+        "customer/order_confirm.html",
+        {
+            "store_id": store_id,
+            "table_no": table_no,
+            "order_lines": order_lines,
+            "total_price": total_price,
+        },
+    )
+
+@never_cache
+@require_http_methods(["POST"])
+def customer_order_submit(request, store_id, table_no):
+    """注文確認画面で確定された注文をデータベースに保存する。"""
+
+    request.session["store_id"] = store_id
+    request.session["table_no"] = table_no
+
+    saved_lines = request.session.get(
+        "customer_order_lines",
+        [],
+    )
+
+    if not saved_lines:
+        return redirect(
+            "customer_order",
+            store_id=store_id,
+            table_no=table_no,
+        )
+
+    product_ids = [
+        line["menu_item_id"]
+        for line in saved_lines
+    ]
+
+    products = MenuItem.objects.filter(
+        store_id=store_id,
+        is_available=True,
+        pk__in=product_ids,
+    )
+
+    product_dict = {
+        product.pk: product
+        for product in products
+    }
+
+    order_lines = []
+
+    for line in saved_lines:
+        product = product_dict.get(line["menu_item_id"])
+
+        if product is None:
+            request.session.pop("customer_order_lines", None)
+
+            return redirect(
+                "customer_order",
+                store_id=store_id,
+                table_no=table_no,
+            )
+
+        quantity = line["quantity"]
+
+        if (
+            not isinstance(quantity, int)
+            or quantity < 1
+            or quantity > 99
+        ):
+            request.session.pop("customer_order_lines", None)
+
+            return redirect(
+                "customer_order",
+                store_id=store_id,
+                table_no=table_no,
+            )
+
+        order_lines.append((product, quantity))
+
+    if len(order_lines) != len(saved_lines):
+        return redirect(
+            "customer_order",
+            store_id=store_id,
+            table_no=table_no,
         )
 
     with transaction.atomic():
@@ -1466,11 +1926,61 @@ def customer_order_submit(request, store_id, table_no):
             ]
         )
 
+    request.session.pop("customer_order_lines", None)
+
     return redirect(
-        f"{reverse('customer_menu', kwargs={'store_id': store_id, 'table_no': table_no})}"
-        f"?ordered=1&order_id={order.pk}"
+        "customer_order_complete",
+        store_id=store_id,
+        table_no=table_no,
+        order_id=order.pk,
     )
 
+@never_cache
+@require_GET
+def customer_order_complete(request, store_id, table_no, order_id):
+    """お客様の注文完了画面を表示する。"""
+
+    order = get_object_or_404(
+        CustomerOrder,
+        pk=order_id,
+        store_id=store_id,
+        table_no=table_no,
+    )
+
+    details = (
+        order.details
+        .select_related("menu_item")
+        .all()
+    )
+
+    order_lines = []
+    total_price = 0
+
+    for detail in details:
+        price = detail.menu_item.price
+        quantity = detail.quantity
+        subtotal = price * quantity
+
+        total_price += subtotal
+
+        order_lines.append({
+            "name": detail.menu_item.name,
+            "price": price,
+            "quantity": quantity,
+            "subtotal": subtotal,
+        })
+
+    return render(
+        request,
+        "customer/order_complete1.html",
+        {
+            "store_id": store_id,
+            "table_no": table_no,
+            "order": order,
+            "order_lines": order_lines,
+            "total_price": total_price,
+        },
+    )
 
 @never_cache
 @require_http_methods(["POST"])
@@ -1569,7 +2079,7 @@ def stockout_order_registration(request):
 @never_cache
 @require_GET
 def stockout_order_registration_page(request):
-    """通常発注または在庫切れ予測からの発注登録画面を表示する。"""
+    """発注内容を確認する画面を表示する。"""
     profile, access_response = _check_store_access(
         request,
         manager_only=True,
@@ -1579,54 +2089,41 @@ def stockout_order_registration_page(request):
         return access_response
 
     store_code = profile.store_code.strip()
+    selected_store_code = request.session.get(
+        "stockout_selected_store_code",
+        "",
+    )
+    selected_items = request.session.get(
+        "stockout_selected_items",
+        [],
+    )
 
-    # ---------------------------------------------
-    # 通常発注：登録済みの全食材を表示する
-    # ---------------------------------------------
-    if request.GET.get("mode") == "normal":
-        ingredients = list(
-            Ingredient.objects.order_by("name")
+    if not selected_items or selected_store_code != store_code:
+        store_id = _get_store_id_from_code(store_code)
+
+        if store_id is None:
+            return HttpResponseForbidden(
+                "所属店舗コードから店舗IDを取得できません。"
+                "管理者に確認してください。"
+            )
+
+        prediction_rows = _build_stockout_prediction_rows(
+            store_code=store_code,
+            store_id=store_id,
         )
-
-        latest_stocktakes = (
-            Stocktake.objects.filter(
-                store_code=store_code,
-            )
-            .select_related("ingredient")
-            .order_by(
-                "ingredient_id",
-                "-stocktake_date",
-                "-updated_at",
-            )
-        )
-
-        latest_by_ingredient = {}
-
-        for stocktake in latest_stocktakes:
-            latest_by_ingredient.setdefault(
-                stocktake.ingredient_id,
-                stocktake,
-            )
 
         selected_items = []
 
-        for ingredient in ingredients:
-            stocktake = latest_by_ingredient.get(
-                ingredient.pk
-            )
+        for row in prediction_rows:
+            if row["missing_stock"] or not row["needs_order"]:
+                continue
 
-            if stocktake is None:
-                actual_stock_display = "未登録"
-                stocktake_date_display = "—"
-            else:
-                actual_stock_display = (
-                    f"{_format_quantity(stocktake.actual_quantity)}"
-                    f" {ingredient.unit}"
-                )
-                stocktake_date_display = (
-                    stocktake.stocktake_date.strftime("%Y/%m/%d")
-                )
+            recommended_quantity = row["recommended_quantity_raw"]
 
+            if Decimal(recommended_quantity) <= 0:
+                continue
+
+            ingredient = row["ingredient"]
             selected_items.append(
                 {
                     "id": ingredient.pk,
@@ -1634,79 +2131,21 @@ def stockout_order_registration_page(request):
                     "name": ingredient.name,
                     "ingredient_name": ingredient.name,
                     "unit": ingredient.unit,
-                    "recommended_quantity": "0",
-                    "recommended_quantity_display": "—",
-                    "actual_stock_display": actual_stock_display,
-                    "stocktake_date_display": stocktake_date_display,
-                    "is_normal_order": True,
+                    "quantity": recommended_quantity,
+                    "recommended_quantity": recommended_quantity,
+                    "recommended_quantity_display": (
+                        row["recommended_quantity_display"]
+                    ),
+                    "delivery_days": row["delivery_days"],
+                    "actual_stock_display": row["actual_stock_display"],
+                    "stocktake_date_display": (
+                        row["stocktake_date_display"]
+                    ),
                 }
             )
 
         request.session["stockout_selected_items"] = selected_items
         request.session["stockout_selected_store_code"] = store_code
-
-    # ---------------------------------------------
-    # 在庫切れ予測：従来どおり選択食材を表示する
-    # ---------------------------------------------
-    else:
-        selected_store_code = request.session.get(
-            "stockout_selected_store_code",
-            "",
-        )
-        selected_items = request.session.get(
-            "stockout_selected_items",
-            [],
-        )
-
-        if not selected_items or selected_store_code != store_code:
-            store_id = _get_store_id_from_code(store_code)
-
-            if store_id is None:
-                return HttpResponseForbidden(
-                    "所属店舗コードから店舗IDを取得できません。"
-                    "管理者に確認してください。"
-                )
-
-            prediction_rows = _build_stockout_prediction_rows(
-                store_code=store_code,
-                store_id=store_id,
-            )
-
-            selected_items = []
-
-            for row in prediction_rows:
-                if row["missing_stock"] or not row["needs_order"]:
-                    continue
-
-                recommended_quantity = row["recommended_quantity_raw"]
-
-                if Decimal(recommended_quantity) <= 0:
-                    continue
-
-                ingredient = row["ingredient"]
-
-                selected_items.append(
-                    {
-                        "id": ingredient.pk,
-                        "ingredient_id": ingredient.pk,
-                        "name": ingredient.name,
-                        "ingredient_name": ingredient.name,
-                        "unit": ingredient.unit,
-                        "quantity": recommended_quantity,
-                        "recommended_quantity": recommended_quantity,
-                        "recommended_quantity_display": (
-                            row["recommended_quantity_display"]
-                        ),
-                        "delivery_days": row["delivery_days"],
-                        "actual_stock_display": row["actual_stock_display"],
-                        "stocktake_date_display": (
-                            row["stocktake_date_display"]
-                        ),
-                    }
-                )
-
-            request.session["stockout_selected_items"] = selected_items
-            request.session["stockout_selected_store_code"] = store_code
 
     return render(
         request,

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注文完了</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Meiryo", sans-serif;
+            background: #f7f7f7;
+            color: #333;
+            padding-bottom: 30px;
+        }
+
+        header {
+            background: #fff;
+            padding: 18px 16px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        header h1 {
+            margin: 0 0 8px;
+            font-size: 22px;
+        }
+
+        .table-number {
+            font-size: 14px;
+            color: #666;
+        }
+
+        main {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px 16px;
+        }
+
+        .complete-message {
+            background: #fff;
+            border-radius: 14px;
+            padding: 28px 16px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .check-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 14px;
+            border-radius: 50%;
+            background: #e5f5e9;
+            color: #27834b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: bold;
+        }
+
+        .complete-message h2 {
+            margin: 0 0 12px;
+            font-size: 23px;
+        }
+
+        .complete-message p {
+            margin: 0;
+            font-size: 14px;
+            color: #666;
+            line-height: 1.8;
+        }
+
+        .section-title {
+            font-size: 17px;
+            margin: 0 0 14px;
+        }
+
+        .order-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .order-item {
+            background: #fff;
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .item-name {
+            font-size: 15px;
+            font-weight: bold;
+            margin-bottom: 9px;
+        }
+
+        .item-detail {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .subtotal {
+            color: #c86b42;
+            font-weight: bold;
+            font-size: 15px;
+            white-space: nowrap;
+        }
+
+        .total-area {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px 16px;
+            margin-top: 16px;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .total-label {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .total-price {
+            font-size: 25px;
+            font-weight: bold;
+            color: #c86b42;
+        }
+
+        .order-time {
+            text-align: center;
+            margin: 16px 0 24px;
+            color: #777;
+            font-size: 13px;
+        }
+
+        .button-area {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            border-radius: 9px;
+            font-size: 15px;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .history-button {
+            background: #c86b42;
+            color: #fff;
+            border: none;
+        }
+
+        .menu-button {
+            background: #fff;
+            color: #555;
+            border: 1px solid #ccc;
+        }
+
+        .empty-message {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            color: #777;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>ご注文</h1>
+        <div class="table-number" id="tableNumber">
+            テーブル番号：1
+        </div>
+    </header>
+
+    <main>
+        <section class="complete-message">
+            <div class="check-icon">✓</div>
+            <h2>ご注文ありがとうございます！</h2>
+            <p>
+                ご注文を受け付けました。<br>
+                商品が届くまで少々お待ちください。
+            </p>
+        </section>
+
+        <h2 class="section-title">今回の注文内容</h2>
+
+        <div class="order-list" id="orderList">
+            {% for item in order_lines %}
+            <div class="order-item">
+                <div class="item-name">
+                    {{ item.name }}
+                </div>
+
+                <div class="item-detail">
+                    <span>
+                        ¥{{ item.price }} × {{ item.quantity }}点
+                    </span>
+
+                    <span class="subtotal">
+                        ¥{{ item.subtotal }}
+                    </span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-message">
+                注文内容を表示できません。
+            </div>
+            {% endfor %}
+        </div>
+
+        <section class="total-area">
+            <div class="total-row">
+                <span class="total-label">合計金額</span>
+                <span class="total-price" id="totalPrice">
+                    ¥{{ total_price }}
+                </span>
+            </div>
+        </section>
+
+        <div class="order-time" id="orderTime"></div>
+
+        <div class="button-area">
+            <button type="button"
+                    class="button history-button"
+                    id="historyButton">
+                注文履歴を見る
+            </button>
+
+            <button type="button"
+                    class="button menu-button"
+                    id="menuButton">
+                メニューに戻る
+            </button>
+        </div>
+    </main>
+
+
+    <script>
+        // テーブル番号を表示
+        document.getElementById("tableNumber").textContent =
+            "テーブル番号：{{ table_no }}";
+
+        // 注文時刻を表示
+            const orderTime = new Date("{{ order.ordered_at|date:'c' }}");
+
+            document.getElementById("orderTime").textContent =
+                "注文時刻：" +
+                orderTime.toLocaleString("ja-JP", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                });
+
+        // 注文履歴画面へ移動
+            document.getElementById("historyButton").addEventListener(
+                "click",
+                function () {
+                    window.location.href =
+                        "{% url 'customer_order_history' store_id=store_id table_no=table_no %}";
+                }
+            );
+
+        // メニュー画面へ戻る
+        document.getElementById("menuButton").addEventListener(
+            "click",
+            function () {
+                window.location.href =
+                    "{% url 'customer_order' store_id=store_id table_no=table_no %}";
+            }
+        );
+    </script>
+
+</body>
+</html>

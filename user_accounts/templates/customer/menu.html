@@ -1,0 +1,647 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>お客様用メニュー</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Meiryo", sans-serif;
+            background: #f7f7f7;
+            color: #333;
+            padding-bottom: 110px;
+        }
+
+        header {
+            background: #fff;
+            padding: 18px 16px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        header h1 {
+            margin: 0 0 8px;
+            font-size: 22px;
+        }
+
+        .table-number {
+            font-size: 14px;
+            color: #666;
+        }
+
+        main {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        /* カテゴリー */
+        .categories {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+
+        .category-button {
+            flex: 1;
+            min-width: 0;
+            border: 1px solid #ddd;
+            background: #fff;
+            border-radius: 22px;
+            padding: 11px 5px;
+            font-size: 14px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .category-button.active {
+            background: #c86b42;
+            color: #fff;
+            border-color: #c86b42;
+        }
+
+        /* メニュー一覧 */
+        .menu-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        .menu-card {
+            min-width: 0;
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 7px #0000000d;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 画像の枠を統一 */
+        .menu-image {
+            display: block;
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            height: auto;
+            object-fit: contain;
+            background: #fff;
+            flex-shrink: 0;
+        }
+
+        .image-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-size: 13px;
+            text-align: center;
+            padding: 8px;
+        }
+
+        /* メニュー情報 */
+        .menu-info {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .menu-name {
+            font-size: 14px;
+            font-weight: bold;
+            line-height: 1.5;
+            min-height: 42px;
+            margin: 0 0 5px;
+            overflow-wrap: anywhere;
+        }
+
+        .menu-price {
+            font-size: 16px;
+            font-weight: bold;
+            color: #c86b42;
+            margin-bottom: 10px;
+        }
+
+        /* 数量変更 */
+        .quantity-control {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 5px;
+            margin-top: auto;
+        }
+
+        .quantity-control button {
+            width: 34px;
+            height: 34px;
+            flex-shrink: 0;
+            border: 1px solid #ddd;
+            background: #fff;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .quantity-control button:disabled {
+            opacity: .35;
+            cursor: default;
+        }
+
+        .quantity {
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        /* 画面下部のカート */
+        .cart-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 12px 16px;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+            background: #fff;
+            border-top: 1px solid #ddd;
+            box-shadow: 0 -3px 12px #0000000a;
+            z-index: 10;
+        }
+
+        .cart-inner {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .cart-count {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .cart-total {
+            font-size: 19px;
+            font-weight: bold;
+            margin-top: 3px;
+        }
+
+        .confirm-button {
+            background: #c86b42;
+            color: #fff;
+            border: none;
+            border-radius: 9px;
+            padding: 14px 18px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        /* 下部のボタンを横並びにする */
+        .cart-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        /* 注文履歴ボタン */
+        .history-button {
+            background: #fff;
+            color: #c86b42;
+            border: 1px solid #c86b42;
+            border-radius: 9px;
+            padding: 14px 10px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+            touch-action: manipulation;
+        }
+
+        .confirm-button:disabled {
+            background: #ccc;
+            cursor: default;
+        }
+
+        .notice {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: #777;
+            font-size: 13px;
+            padding: 30px 0;
+        }
+
+        /* スマートフォン */
+        @media screen and (max-width: 480px) {
+            header {
+                padding: 16px 12px;
+            }
+
+            header h1 {
+                font-size: 20px;
+            }
+
+            main {
+                padding: 12px;
+            }
+
+            .categories {
+                gap: 6px;
+            }
+
+            .category-button {
+                padding: 10px 4px;
+                font-size: 13px;
+            }
+
+            .menu-list {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+            }
+
+            .menu-info {
+                padding: 8px;
+            }
+
+            .menu-name {
+                font-size: 13px;
+                min-height: 39px;
+            }
+
+            .menu-price {
+                font-size: 14px;
+            }
+
+            .quantity-control {
+                gap: 3px;
+            }
+
+            .quantity-control button {
+                width: 32px;
+                height: 32px;
+            }
+
+            .cart-bar {
+                padding: 10px 12px;
+                padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+            }
+
+            .cart-inner {
+                gap: 8px;
+            }
+
+            .cart-count {
+                font-size: 11px;
+            }
+
+            .cart-total {
+                font-size: 17px;
+            }
+
+            .confirm-button {
+                max-width: 65%;
+                padding: 12px 10px;
+                font-size: 12px;
+                white-space: normal;
+            }
+
+            .cart-buttons {
+                gap: 5px;
+            }
+
+            .history-button {
+                padding: 12px 7px;
+                font-size: 11px;
+            }
+
+            .confirm-button {
+                padding: 12px 7px;
+                font-size: 11px;
+                white-space: nowrap;
+            }
+
+            body {
+                padding-bottom: 125px;
+            }
+        }
+
+        /* 小さなスマートフォン */
+        @media screen and (max-width: 360px) {
+            main {
+                padding: 10px;
+            }
+
+            .menu-list {
+                gap: 7px;
+            }
+
+            .menu-info {
+                padding: 7px;
+            }
+
+            .quantity-control button {
+                width: 29px;
+                height: 29px;
+            }
+
+            .confirm-button {
+                padding: 10px 8px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <form
+        id="customerOrderForm"
+        method="POST"
+        action="{% url 'customer_order_confirm' store_id=store_id table_no=table_no %}"
+        style="display: none;"
+    >
+        {% csrf_token %}
+    </form>
+
+    <header>
+        <h1>メニュー</h1>
+        <div class="table-number" id="tableNumber">
+            テーブル番号：1
+        </div>
+    </header>
+
+    <main>
+        <div class="categories">
+            <button type="button"
+                    class="category-button active"
+                    data-category="すべて">すべて</button>
+
+            <button type="button"
+                    class="category-button"
+                    data-category="料理">料理</button>
+
+            <button type="button"
+                    class="category-button"
+                    data-category="ドリンク">ドリンク</button>
+        </div>
+
+        <div class="menu-list" id="menuList">
+            {% for product in products %}
+                <article
+                    class="menu-card"
+                    data-id="{{ product.id }}"
+                    data-name="{{ product.name|escape }}"
+                    data-price="{{ product.price }}"
+                    data-category="{% if product.category == 'ドリンク' %}ドリンク{% else %}料理{% endif %}"
+                >
+                    <div class="menu-image image-placeholder">
+                        画像は準備中です
+                    </div>
+
+                    <div class="menu-info">
+                        <p class="menu-name">{{ product.name }}</p>
+
+                        <div class="menu-price">
+                            ¥{{ product.price }}
+                        </div>
+
+                        <div class="quantity-control">
+                            <button
+                                type="button"
+                                class="minus-button"
+                                aria-label="{{ product.name }}を1つ減らす"
+                                disabled
+                            >−</button>
+
+                            <span class="quantity">0</span>
+
+                            <button
+                                type="button"
+                                class="plus-button"
+                                aria-label="{{ product.name }}を1つ増やす"
+                            >+</button>
+                        </div>
+                    </div>
+                </article>
+            {% empty %}
+                <p class="notice">
+                    現在、販売中のメニューはありません。
+                </p>
+            {% endfor %}
+        </div>
+    </main>
+
+    <div class="cart-bar">
+        <div class="cart-inner">
+
+            <div class="cart-summary">
+                <div class="cart-count">
+                    カート：<span id="cartCount">0</span>点
+                </div>
+
+                <div class="cart-total" id="cartTotal">¥0</div>
+            </div>
+
+            <div class="cart-buttons">
+                <button type="button"
+                        class="history-button"
+                        id="historyButton">
+                    注文履歴を見る
+                </button>
+
+                <button type="button"
+                        class="confirm-button"
+                        id="confirmButton"
+                        disabled>
+                    注文内容を確認する
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+
+    <script>
+        // Djangoから表示された商品情報を取得
+        const menus = Array.from(
+            document.querySelectorAll(".menu-card")
+        ).map(card => ({
+            id: Number(card.dataset.id),
+            name: card.dataset.name,
+            price: Number(card.dataset.price),
+            category: card.dataset.category,
+            element: card
+        }));
+
+        const quantities = {};
+        let currentCategory = "すべて";
+
+        // Djangoから店舗番号・テーブル番号を取得
+        const storeId = "{{ store_id|escapejs }}";
+        const table = "{{ table_no|escapejs }}";
+
+        document.getElementById("tableNumber").textContent =
+            "テーブル番号：" + table;
+
+        const menuList = document.getElementById("menuList");
+        const cartCount = document.getElementById("cartCount");
+        const cartTotal = document.getElementById("cartTotal");
+        const confirmButton = document.getElementById("confirmButton");
+        const historyButton = document.getElementById("historyButton");
+        const customerOrderForm = document.getElementById("customerOrderForm");
+
+        // 商品数量を画面に反映
+        function updateProductQuantity(menu) {
+            const quantity = quantities[menu.id] || 0;
+
+            menu.element.querySelector(".quantity").textContent = quantity;
+
+            menu.element.querySelector(".minus-button").disabled =
+                quantity === 0;
+        }
+
+        // カテゴリー表示切り替え
+        function renderMenus() {
+            let visibleCount = 0;
+
+            menus.forEach(menu => {
+                const visible =
+                    currentCategory === "すべて" ||
+                    menu.category === currentCategory;
+
+                menu.element.style.display = visible ? "flex" : "none";
+
+                if (visible) {
+                    visibleCount++;
+                }
+
+                updateProductQuantity(menu);
+            });
+
+            let notice = menuList.querySelector(".category-notice");
+
+            if (visibleCount === 0 && menus.length > 0) {
+                if (!notice) {
+                    notice = document.createElement("p");
+                    notice.className = "notice category-notice";
+                    notice.textContent =
+                        "このカテゴリーのメニューはありません。";
+                    menuList.appendChild(notice);
+                }
+            } else if (notice) {
+                notice.remove();
+            }
+
+            updateCart();
+        }
+
+        // 注文数量を変更
+        function changeQuantity(id, amount) {
+            quantities[id] = Math.max(
+                0,
+                (quantities[id] || 0) + amount
+            );
+
+            const menu = menus.find(item => item.id === id);
+
+            if (menu) {
+                updateProductQuantity(menu);
+            }
+
+            updateCart();
+        }
+
+        // カートの点数と合計金額を更新
+        function updateCart() {
+            let count = 0;
+            let total = 0;
+
+            menus.forEach(menu => {
+                const quantity = quantities[menu.id] || 0;
+
+                count += quantity;
+                total += menu.price * quantity;
+            });
+
+            cartCount.textContent = count;
+
+            cartTotal.textContent =
+                "¥" + total.toLocaleString("ja-JP");
+
+            confirmButton.disabled = count === 0;
+        }
+
+        // 数量ボタンのイベント設定
+        menus.forEach(menu => {
+            menu.element.querySelector(".minus-button")
+                .addEventListener("click", () => {
+                    changeQuantity(menu.id, -1);
+                });
+
+            menu.element.querySelector(".plus-button")
+                .addEventListener("click", () => {
+                    changeQuantity(menu.id, 1);
+                });
+        });
+
+        // カテゴリー切り替え
+        document.querySelectorAll(".category-button").forEach(button => {
+            button.addEventListener("click", () => {
+                currentCategory = button.dataset.category;
+
+                document.querySelectorAll(".category-button")
+                    .forEach(item => item.classList.remove("active"));
+
+                button.classList.add("active");
+
+                renderMenus();
+            });
+        });
+
+        // 注文確認画面へ進む
+        confirmButton.addEventListener("click", () => {
+            // 既存の数量入力欄を削除
+            customerOrderForm.querySelectorAll(
+                'input[name^="quantity_"]'
+            ).forEach(input => input.remove());
+
+            // 商品ごとの数量をDjangoへ送信
+            menus.forEach(menu => {
+                const input = document.createElement("input");
+
+                input.type = "hidden";
+                input.name = `quantity_${menu.id}`;
+                input.value = quantities[menu.id] || 0;
+
+                customerOrderForm.appendChild(input);
+            });
+
+            // 注文確認画面へPOST
+            customerOrderForm.submit();
+        });
+
+        // 注文履歴画面へ移動
+        historyButton.addEventListener("click", () => {
+            location.href =
+                "{% url 'customer_order_history' store_id table_no %}";
+        });
+
+        // 初期表示
+        renderMenus();
+    </script>
+</body>
+</html>

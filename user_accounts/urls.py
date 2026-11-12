@@ -190,7 +190,7 @@ urlpatterns = [
         name="recipe_register",
     ),
 
-        # 本社管理者用・在庫メニュー
+    # 本社管理者用・在庫メニュー
     path(
         "headquarters/stock",
         views.headquarters_stock,
@@ -231,8 +231,43 @@ urlpatterns = [
         name="customer_menu",
     ),
     path(
+        "order/<int:store_id>/<int:table_no>/confirm",
+        views.customer_order_confirm,
+        name="customer_order_confirm",
+    ),
+    path(
         "order/<int:store_id>/<int:table_no>/submit",
         views.customer_order_submit,
         name="customer_order_submit",
     ),
+    path(
+        "order/<int:store_id>/<int:table_no>/complete/<int:order_id>",
+        views.customer_order_complete,
+        name="customer_order_complete",
+    ),
+    path(
+        "order/<int:store_id>/<int:table_no>/history",
+        views.customer_order_history,
+        name="customer_order_history",
+    ),
+
+    # お客様用・会計内容画面
+    path(
+        "order/<int:store_id>/<int:table_no>/checkout",
+        views.customer_checkout_page,
+        name="customer_checkout_page",
+    ),
+
+    # お客様用・会計確定処理
+    path(
+        "order/<int:store_id>/<int:table_no>/checkout",
+        views.customer_checkout_page,
+        name="customer_checkout_page",
+    ),
+    path(
+        "order/<int:store_id>/<int:table_no>/checkout/complete",
+        views.customer_checkout,
+        name="customer_checkout",
+    ),
+
 ]
