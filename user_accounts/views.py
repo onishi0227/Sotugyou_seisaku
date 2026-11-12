@@ -1407,28 +1407,11 @@ def customer_order_history(request, store_id, table_no):
 
 @require_GET
 def customer_menu(request, store_id, table_no):
-    """店舗・テーブルに対応したメニュー商品一覧を表示する。"""
-    request.session["store_id"] = store_id
-    request.session["table_no"] = table_no
-
-    products = list(
-        MenuItem.objects.filter(
-            store_id=store_id,
-            is_available=True,
-        ).order_by("sort_order", "id")
-    )
-
-    return render(
-        request,
-        "product_list.html",
-        {
-            "store_id": store_id,
-            "table_no": table_no,
-            "products": products,
-            "errors": [],
-            "order_success": request.GET.get("ordered") == "1",
-            "order_id": request.GET.get("order_id", ""),
-        },
+    """商品一覧画面を表示せず、お客様用トップ画面へ戻す。"""
+    return redirect(
+        "customer_order",
+        store_id=store_id,
+        table_no=table_no,
     )
 
 @never_cache
@@ -1507,7 +1490,10 @@ def customer_checkout(request, store_id, table_no):
             )
 
         # 店舗IDに対応する店舗コードを取得
-        raw_store_codes = EmployeeProfile.objects.exclude(
+        # 店舗IDに対応する店舗コードを取得
+        # EmployeeProfileに複数の表記があっても、
+        # 実際に理論在庫に登録されている店舗コードを優先する
+        raw_store_codes = TheoreticalStock.objects.exclude(
             store_code=""
         ).values_list(
             "store_code",
