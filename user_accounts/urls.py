@@ -64,6 +64,11 @@ urlpatterns = [
         views.store_top,
         name="store_top",
     ),
+        path(
+        "store/inventory-management",
+        views.inventory_management,
+        name="inventory_management",
+    ),
     path(
         "store/staff-management",
         views.staff_management,
@@ -79,10 +84,20 @@ urlpatterns = [
         views.inventory_list,
         name="inventory_list",
     ),
+        path(
+        "store/inventory",
+        views.inventory_list,
+        name="stock_list",
+    ),
     path(
         "store/stocktake",
         views.stocktake_register,
         name="stocktake_register",
+    ),
+        path(
+        "store/stocktake",
+        views.stocktake_register,
+        name="stock_change",
     ),
     path(
         "store/stocktake/complete",

@@ -1,4 +1,6 @@
 
+import re
+
 from django import forms
 from django.contrib.auth import get_user_model, password_validation
 from django.core.exceptions import ValidationError
@@ -53,6 +55,19 @@ class AccountCreationForm(forms.Form):
             )
 
         return employee_id
+
+    def clean_full_name(self):
+        full_name = self.cleaned_data["full_name"].strip()
+
+        if not re.fullmatch(
+            r"[ぁ-ゖァ-ヺー一-龯A-Za-z]+(?:[ 　][ぁ-ゖァ-ヺー一-龯A-Za-z]+)*",
+            full_name,
+        ):
+            raise ValidationError(
+                "氏名は漢字・ひらがな・カタカナ・英字のみ使用できます。数字や記号は使用できません。"
+            )
+
+        return full_name
 
     def clean_password1(self):
         password = self.cleaned_data["password1"]

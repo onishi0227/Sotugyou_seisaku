@@ -773,6 +773,26 @@ def inventory_list(request):
         },
     )
 
+@never_cache
+@require_GET
+def inventory_management(request):
+    """店舗管理者・店員用の在庫管理メニュー画面を表示する。"""
+    profile, access_response = _check_store_access(request)
+
+    if access_response is not None:
+        return access_response
+
+    return render(
+        request,
+        "inventory_management.html",
+        {
+            "is_store_manager": (
+                profile.role == EmployeeProfile.Role.STORE_MANAGER
+            ),
+        },
+    )
+
+
 
 @never_cache
 @require_GET
@@ -814,11 +834,8 @@ def stockout_prediction(request):
 @never_cache
 @require_http_methods(["GET", "POST"])
 def stocktake_register(request):
-    """店長が実在庫を登録・修正する。0も登録できる。"""
-    profile, access_response = _check_store_access(
-        request,
-        manager_only=True,
-    )
+    """店長・店員が実在庫を登録・修正する。0も登録できる。"""
+    profile, access_response = _check_store_access(request)
 
     if access_response is not None:
         return access_response
@@ -900,7 +917,7 @@ def stocktake_register(request):
                         },
                     )
 
-                    TheoreticalStock.objects.get_or_create(
+                    TheoreticalStock.objects.update_or_create(
                         store_code=store_code,
                         ingredient=ingredient,
                         defaults={"quantity": quantity},
@@ -933,10 +950,7 @@ def stocktake_register(request):
 @require_GET
 def stocktake_complete(request):
     """棚卸登録完了画面を表示する。"""
-    profile, access_response = _check_store_access(
-        request,
-        manager_only=True,
-    )
+    profile, access_response = _check_store_access(request)
 
     if access_response is not None:
         return access_response
@@ -1023,16 +1037,198 @@ def ingredient_register(request):
         {"form": form},
     )
 
+
 @never_cache
 @require_GET
 def headquarters_stock(request):
-    """本社管理者用の在庫メニュー画面を表示する。"""
+    """本社管理者用の店舗別在庫・在庫切れ予測画面を表示する。"""
     access_response = _check_headquarters_access(request)
 
     if access_response is not None:
         return access_response
 
-    return render(request, "stock.html")
+    today = timezone.localdate()
+
+    # 店舗コードを取得する
+    store_codes = set(
+        EmployeeProfile.objects.filter(
+            role__in=[
+                EmployeeProfile.Role.STORE_MANAGER,
+                EmployeeProfile.Role.STAFF,
+            ]
+        )
+        .exclude(store_code="")
+        .values_list("store_code", flat=True)
+        .distinct()
+    )
+
+    # 社員が存在しなくても、在庫データがある店舗は選択可能にする
+    store_codes.update(
+        Stocktake.objects.exclude(store_code="")
+        .values_list("store_code", flat=True)
+        .distinct()
+    )
+    store_codes.update(
+        TheoreticalStock.objects.exclude(store_code="")
+        .values_list("store_code", flat=True)
+        .distinct()
+    )
+
+    stores = [
+        {"code": code, "name": code}
+        for code in sorted(store_codes)
+    ]
+
+    # 店舗ごとの棚卸データを日付別にまとめる
+    stock_data = {}
+
+    for store in stores:
+        store_code = store["code"]
+        date_data = {}
+
+        records = (
+            Stocktake.objects.filter(store_code=store_code)
+            .select_related("ingredient", "recorded_by")
+            .order_by("stocktake_date", "ingredient__name")
+        )
+
+        theoretical_by_ingredient = {
+            stock.ingredient_id: stock
+            for stock in TheoreticalStock.objects.filter(
+                store_code=store_code
+            )
+        }
+
+        for record in records:
+            date_key = record.stocktake_date.isoformat()
+
+            theoretical = theoretical_by_ingredient.get(
+                record.ingredient_id
+            )
+
+            # 理論在庫は現在値のみ保存されているため、
+            # 棚卸日と今日が一致する場合だけ比較する
+            if record.stocktake_date == today:
+                if theoretical is None:
+                    theoretical_display = "未登録"
+                    difference_display = "—"
+                    status = "理論在庫未登録"
+                    ok = False
+                else:
+                    theoretical_quantity = theoretical.quantity
+                    difference = (
+                        record.actual_quantity - theoretical_quantity
+                    )
+
+                    theoretical_display = (
+                        f"{_format_quantity(theoretical_quantity)} "
+                        f"{record.ingredient.unit}"
+                    )
+                    difference_display = _format_quantity(difference)
+
+                    if difference == 0:
+                        status = "一致"
+                        ok = True
+                    else:
+                        status = "差異あり"
+                        ok = False
+            else:
+                theoretical_display = "履歴なし"
+                difference_display = "—"
+                status = "棚卸済み"
+                ok = True
+
+            staff_name = (
+                record.recorded_by.full_name
+                or record.recorded_by.user.username
+            )
+
+            date_data.setdefault(date_key, []).append({
+                "name": record.ingredient.name,
+                "theoretical": theoretical_display,
+                "quantity": (
+                    f"{_format_quantity(record.actual_quantity)} "
+                    f"{record.ingredient.unit}"
+                ),
+                "difference": difference_display,
+                "staff": staff_name,
+                "status": status,
+                "ok": ok,
+            })
+
+        stock_data[store_code] = date_data
+
+    # 店舗ごとの在庫切れ予測データを取得する
+    prediction_data = {}
+
+    for store in stores:
+        store_code = store["code"]
+        store_id = _get_store_id_from_code(store_code)
+
+        if store_id is None:
+            prediction_data[store_code] = []
+            continue
+
+        # 商品が登録されていない店舗には予測データを表示しない
+        if not MenuItem.objects.filter(store_id=store_id).exists():
+            prediction_data[store_code] = []
+            continue
+
+        rows = _build_stockout_prediction_rows(
+            store_code,
+            store_id,
+        )
+
+        prediction_data[store_code] = [
+            {
+                "name": row["ingredient"].name,
+                "quantity": row["actual_stock_display"],
+                "date": row["stocktake_date_display"],
+                "order": row["recommended_quantity_display"],
+                "status": row["judgment"],
+                "className": (
+                    "danger"
+                    if row["urgent"]
+                    else "warning"
+                    if row["needs_order"] or row["missing_stock"]
+                    else "safe"
+                ),
+            }
+            for row in rows
+        ]
+
+    # 棚卸日選択欄の範囲を実際のデータから設定する
+    stocktake_dates = list(
+        Stocktake.objects.values_list(
+            "stocktake_date", flat=True
+        ).distinct().order_by("stocktake_date")
+    )
+
+    min_date = (
+        stocktake_dates[0].isoformat()
+        if stocktake_dates
+        else today.isoformat()
+    )
+    max_date = today.isoformat()
+
+    default_date = (
+        stocktake_dates[-1].isoformat()
+        if stocktake_dates
+        else today.isoformat()
+    )
+
+    return render(
+        request,
+        "stock.html",
+        {
+            "stores": stores,
+            "stock_data": stock_data,
+            "prediction_data": prediction_data,
+            "min_date": min_date,
+            "max_date": max_date,
+            "default_date": default_date,
+        },
+    )
 
 
 @never_cache
