@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Meiryo", sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        /* ヘッダー */
+        header {
+            background-color: #212529;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        /* メイン */
+        .container {
+            width: 90%;
+            max-width: 1100px;
+            margin: 30px auto;
+        }
+
+        /* 戻るボタン */
+        .back-button-area {
+            display: flex;
+            justify-content: center;
+            margin: 40px 0 30px;
+        }
+
+        .back-button {
+            display: inline-block;
+            padding: 12px 35px;
+            background-color: #212529;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .back-button:hover {
+            background-color: #343a40;
+        }
+
+        /* 店舗選択 */
+        .store-select-area {
+            background-color: white;
+            padding: 18px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .store-select-area label {
+            font-weight: bold;
+        }
+
+        select,
+        input[type="date"],
+        input[type="month"] {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 15px;
+            background-color: white;
+        }
+
+        /* 日付別・月別切り替え */
+        .tab-area {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 6px;
+            background-color: #ddd;
+            color: #333;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .tab-button.active {
+            background-color: #495057;
+            color: white;
+        }
+
+        /* 共通カード */
+        .content-card {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+        }
+
+        .content-card h2 {
+            margin-top: 0;
+            font-size: 20px;
+        }
+
+        /* 日付・月選択 */
+        .date-select-area {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .date-select-area label {
+            font-weight: bold;
+        }
+
+        /* 合計表示 */
+        .total-area {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 20px;
+            background-color: #DEE2E6;
+            border-radius: 6px;
+            margin-bottom: 25px;
+        }
+
+        .total-label {
+            font-size: 17px;
+            font-weight: bold;
+        }
+
+        .total-number {
+            color: #212529;
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        /* カテゴリー切り替え */
+        .category-area {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .category-button {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #495057;
+            border-radius: 5px;
+            background-color: white;
+            color: #495057;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .category-button.active {
+            background-color: #495057;
+            color: white;
+        }
+
+        /* カテゴリー合計 */
+        .category-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #f8f8f8;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .category-total span:last-child {
+            color: #495057;
+            font-size: 20px;
+        }
+
+        /* テーブル */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 400px;
+        }
+
+        th,
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+
+        td:first-child,
+        th:first-child {
+            text-align: left;
+        }
+
+        /* 表示切り替え */
+        .hidden {
+            display: none;
+        }
+
+        /* スマホ対応 */
+        @media (max-width: 576px) {
+
+            header h1 {
+                font-size: 18px;
+            }
+
+            .container {
+                width: 94%;
+                margin: 20px auto;
+            }
+
+            .content-card {
+                padding: 18px 14px;
+            }
+
+            .store-select-area {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .date-select-area {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .date-select-area input {
+                width: 100%;
+            }
+
+            .total-number {
+                font-size: 25px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>{{ page_title }}</h1>
+</header>
+
+<div class="container">
+
+    <!-- 本社側だけ店舗選択を表示 -->
+    {% if is_headquarters %}
+    <div class="store-select-area">
+        <label for="storeSelect">店舗選択：</label>
+
+        <select id="storeSelect">
+            <option value="all"{% if selected_store == "all" %} selected{% endif %}>全店舗</option>
+            {% for store in store_options %}
+                <option value="{{ store.id }}"{% if selected_store == store.id|stringformat:"s" %} selected{% endif %}>
+                    {{ store.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
+    <!-- 日付別・月別切り替え -->
+    <div class="tab-area">
+
+        <button type="button"
+                class="tab-button active"
+                id="dailyTab">
+            日付別
+        </button>
+
+        <button type="button"
+                class="tab-button"
+                id="monthlyTab">
+            月別
+        </button>
+
+    </div>
+
+    <!-- ================= 日付別 ================= -->
+    <section id="dailySection">
+
+        <div class="content-card">
+
+            <h2>日付別注文データ</h2>
+
+            <!-- 日付選択 -->
+            <div class="date-select-area">
+                <label for="dateSelect">注文日：</label>
+                <input type="date" id="dateSelect" value="{{ target_date|date:'Y-m-d' }}">
+            </div>
+
+            <!-- 1日の合計 -->
+            <div class="total-area">
+                <span class="total-label">1日の合計注文数</span>
+
+                <span class="total-number">
+                    <span id="dailyTotal">0</span> 点
+                </span>
+            </div>
+
+            <!-- 料理・ドリンク切り替え -->
+            <div class="category-area">
+
+                <button type="button"
+                        class="category-button active"
+                        id="foodButton">
+                    料理
+                </button>
+
+                <button type="button"
+                        class="category-button"
+                        id="drinkButton">
+                    ドリンク
+                </button>
+
+            </div>
+
+            <!-- カテゴリー合計 -->
+            <div class="category-total">
+                <span id="categoryTotalLabel">料理の合計</span>
+
+                <span>
+                    <span id="categoryTotal">0</span> 点
+                </span>
+            </div>
+
+            <!-- 商品別注文数 -->
+            <div class="table-wrapper">
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>メニュー名</th>
+                            <th>注文数量</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="dailyTableBody">
+                    </tbody>
+                </table>
+
+            </div>
+
+            <!-- 戻るボタン -->
+            <div class="back-button-area">
+                <a href="{% url back_url %}" class="back-button">
+                    {{ back_button_text }}
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= 月別 ================= -->
+    <section id="monthlySection" class="hidden">
+
+        <div class="content-card">
+
+            <h2>月別注文データ</h2>
+
+            <!-- 月選択 -->
+            <div class="date-select-area">
+                <label for="monthSelect">対象月：</label>
+                <input type="month" id="monthSelect" value="{{ target_month|date:'Y-m' }}">
+            </div>
+
+            <!-- 1か月の合計 -->
+            <div class="total-area">
+                <span class="total-label">1か月の合計注文数</span>
+
+                <span class="total-number">
+                    <span id="monthlyTotal">0</span> 点
+                </span>
+            </div>
+
+            <!-- 料理・ドリンク切り替え -->
+            <div class="category-area">
+
+                <button type="button"
+                        class="category-button active"
+                        id="monthlyFoodButton">
+                    料理
+                </button>
+
+                <button type="button"
+                        class="category-button"
+                        id="monthlyDrinkButton">
+                    ドリンク
+                </button>
+
+            </div>
+
+            <!-- カテゴリー合計 -->
+            <div class="category-total">
+                <span id="monthlyCategoryLabel">料理の合計</span>
+
+                <span>
+                    <span id="monthlyCategoryTotal">0</span> 点
+                </span>
+            </div>
+
+            <!-- メニュー別注文数 -->
+            <div class="table-wrapper">
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>メニュー名</th>
+                            <th>注文数量</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="monthlyTableBody">
+                    </tbody>
+                </table>
+
+            </div>
+
+            <!-- 戻るボタン -->
+            <div class="back-button-area">
+                <a href="{% url back_url %}" class="back-button">
+                    {{ back_button_text }}
+                </a>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+{{ daily_summary|json_script:"daily-summary-data" }}
+{{ monthly_summary|json_script:"monthly-summary-data" }}
+
+<script>
+    // サーバーから渡された注文データ
+    const dailyData = JSON.parse(
+        document.getElementById("daily-summary-data").textContent
+    );
+
+    const monthlyData = JSON.parse(
+        document.getElementById("monthly-summary-data").textContent
+    );
+
+    let currentCategory = "food";
+    let monthlyCategory = "food";
+
+    // メニュー一覧を描画する
+    function renderMenuTable(tbodyId, menus) {
+        const tbody = document.getElementById(tbodyId);
+        tbody.innerHTML = "";
+
+        if (!menus || menus.length === 0) {
+            const tr = document.createElement("tr");
+            const td = document.createElement("td");
+
+            td.colSpan = 2;
+            td.textContent = "該当する注文データはありません。";
+
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+
+            return;
+        }
+
+        menus.forEach(menu => {
+            const tr = document.createElement("tr");
+
+            const nameTd = document.createElement("td");
+            nameTd.textContent = menu.name;
+
+            const countTd = document.createElement("td");
+            countTd.textContent = menu.quantity + " 点";
+
+            tr.appendChild(nameTd);
+            tr.appendChild(countTd);
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 日付別データ表示
+    function renderDailyData() {
+        const menus = currentCategory === "food"
+            ? dailyData.food_menus
+            : dailyData.drink_menus;
+
+        const categoryTotal = currentCategory === "food"
+            ? dailyData.food_total
+            : dailyData.drink_total;
+
+        document.getElementById("dailyTotal").textContent =
+            dailyData.total_quantity ?? 0;
+
+        document.getElementById("categoryTotal").textContent =
+            categoryTotal ?? 0;
+
+        document.getElementById("categoryTotalLabel").textContent =
+            currentCategory === "food"
+                ? "料理の合計"
+                : "ドリンクの合計";
+
+        renderMenuTable("dailyTableBody", menus);
+    }
+
+    // 月別データ表示
+    function renderMonthlyData() {
+        const menus = monthlyCategory === "food"
+            ? monthlyData.food_menus
+            : monthlyData.drink_menus;
+
+        const categoryTotal = monthlyCategory === "food"
+            ? monthlyData.food_total
+            : monthlyData.drink_total;
+
+        document.getElementById("monthlyTotal").textContent =
+            monthlyData.total_quantity ?? 0;
+
+        document.getElementById("monthlyCategoryTotal").textContent =
+            categoryTotal ?? 0;
+
+        document.getElementById("monthlyCategoryLabel").textContent =
+            monthlyCategory === "food"
+                ? "料理の合計"
+                : "ドリンクの合計";
+
+        renderMenuTable("monthlyTableBody", menus);
+    }
+
+    // 日付・月・店舗の条件をサーバーへ送信して再取得する
+    function reloadWithCurrentFilters() {
+        const params = new URLSearchParams(window.location.search);
+
+        const dateValue = document.getElementById("dateSelect").value;
+        const monthValue = document.getElementById("monthSelect").value;
+
+        if (dateValue) {
+            params.set("date", dateValue);
+        } else {
+            params.delete("date");
+        }
+
+        if (monthValue) {
+            params.set("month", monthValue);
+        } else {
+            params.delete("month");
+        }
+
+        const storeSelect = document.getElementById("storeSelect");
+
+        if (storeSelect) {
+            params.set("store_id", storeSelect.value);
+        }
+
+        const query = params.toString();
+
+        window.location.href = query
+            ? `${window.location.pathname}?${query}`
+            : window.location.pathname;
+    }
+
+    // 日付別：料理・ドリンク切り替え
+    document.getElementById("foodButton")
+        .addEventListener("click", function() {
+            currentCategory = "food";
+
+            this.classList.add("active");
+
+            document.getElementById("drinkButton")
+                .classList.remove("active");
+
+            renderDailyData();
+        });
+
+    document.getElementById("drinkButton")
+        .addEventListener("click", function() {
+            currentCategory = "drink";
+
+            this.classList.add("active");
+
+            document.getElementById("foodButton")
+                .classList.remove("active");
+
+            renderDailyData();
+        });
+
+    // 日付別・月別の切り替え
+    document.getElementById("dailyTab")
+        .addEventListener("click", function() {
+            document.getElementById("dailySection")
+                .classList.remove("hidden");
+
+            document.getElementById("monthlySection")
+                .classList.add("hidden");
+
+            this.classList.add("active");
+
+            document.getElementById("monthlyTab")
+                .classList.remove("active");
+        });
+
+    document.getElementById("monthlyTab")
+        .addEventListener("click", function() {
+            document.getElementById("monthlySection")
+                .classList.remove("hidden");
+
+            document.getElementById("dailySection")
+                .classList.add("hidden");
+
+            this.classList.add("active");
+
+            document.getElementById("dailyTab")
+                .classList.remove("active");
+
+            renderMonthlyData();
+        });
+
+    // 月別：料理・ドリンク切り替え
+    document.getElementById("monthlyFoodButton")
+        .addEventListener("click", function() {
+            monthlyCategory = "food";
+
+            this.classList.add("active");
+
+            document.getElementById("monthlyDrinkButton")
+                .classList.remove("active");
+
+            renderMonthlyData();
+        });
+
+    document.getElementById("monthlyDrinkButton")
+        .addEventListener("click", function() {
+            monthlyCategory = "drink";
+
+            this.classList.add("active");
+
+            document.getElementById("monthlyFoodButton")
+                .classList.remove("active");
+
+            renderMonthlyData();
+        });
+
+    // 検索条件の変更時はサーバーから該当データを取得し直す
+    document.getElementById("dateSelect")
+        .addEventListener("change", reloadWithCurrentFilters);
+
+    document.getElementById("monthSelect")
+        .addEventListener("change", reloadWithCurrentFilters);
+
+    // 本社側の店舗選択
+    const storeSelect = document.getElementById("storeSelect");
+
+    if (storeSelect) {
+        storeSelect.addEventListener("change", reloadWithCurrentFilters);
+    }
+
+    // 初期表示
+    renderDailyData();
+    renderMonthlyData();
+</script>
+
+</body>
+</html>

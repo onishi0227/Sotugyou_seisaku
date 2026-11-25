@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 import re
 from decimal import (
     Decimal,
@@ -3515,6 +3515,130 @@ def order_history2(request):
         "order_history2.html",
         {
             "purchase_requests": purchase_requests,
+        },
+    )
+
+
+@never_cache
+@require_GET
+def order_data(request):
+    """店長・本社管理者共通の注文データ画面を表示する。"""
+    profile = _get_employee_profile(request.user) if request.user.is_authenticated else None
+
+    is_headquarters = (
+        profile is not None
+        and profile.role == EmployeeProfile.Role.HEADQUARTERS_ADMIN
+        and request.session.get(LOGIN_PORTAL_SESSION_KEY) == HEADQUARTERS_PORTAL
+    )
+
+    if is_headquarters:
+        access_response = _check_headquarters_access(request)
+        if access_response is not None:
+            return access_response
+        store_id = None
+        selected_store = request.GET.get("store_id", "all").strip() or "all"
+        if selected_store != "all":
+            try:
+                store_id = int(selected_store)
+                if store_id < 1:
+                    raise ValueError
+            except (TypeError, ValueError):
+                return HttpResponseForbidden("店舗の指定が正しくありません。")
+    else:
+        profile, access_response = _check_store_access(request, manager_only=True)
+        if access_response is not None:
+            return access_response
+        store_id = _get_store_id_from_code(profile.store_code)
+        if store_id is None:
+            return HttpResponseForbidden("所属店舗コードから店舗IDを取得できません。")
+        selected_store = str(store_id)
+
+    today = timezone.localdate()
+    raw_date = request.GET.get("date", "").strip()
+    raw_month = request.GET.get("month", "").strip()
+
+    try:
+        target_date = datetime.strptime(raw_date, "%Y-%m-%d").date() if raw_date else today
+    except ValueError:
+        target_date = today
+
+    try:
+        target_month = datetime.strptime(raw_month, "%Y-%m").date().replace(day=1) if raw_month else today.replace(day=1)
+    except ValueError:
+        target_month = today.replace(day=1)
+
+    if is_headquarters:
+        store_ids = sorted(set(
+            list(CustomerOrder.objects.values_list("store_id", flat=True).distinct())
+            + list(MenuItem.objects.values_list("store_id", flat=True).distinct())
+        ))
+        store_options = [{"id": value, "name": f"店舗{value}"} for value in store_ids]
+    else:
+        store_options = [{"id": store_id, "name": f"店舗{store_id}"}]
+
+    def build_summary(start_date, end_date):
+        orders = CustomerOrder.objects.filter(
+            ordered_at__date__gte=start_date,
+            ordered_at__date__lt=end_date,
+        )
+        if store_id is not None:
+            orders = orders.filter(store_id=store_id)
+
+        order_count = orders.count()
+        details = OrderDetail.objects.filter(order__in=orders).select_related(
+            "order", "menu_item"
+        ).order_by("menu_item__name", "pk")
+
+        food_menus = {}
+        drink_menus = {}
+        food_total = 0
+        drink_total = 0
+        food_sales = 0
+        drink_sales = 0
+
+        for detail in details:
+            menu = detail.menu_item
+            quantity = detail.quantity
+            subtotal = menu.price * quantity
+            target = drink_menus if menu.category == "ドリンク" else food_menus
+            target[menu.name] = target.get(menu.name, 0) + quantity
+            if menu.category == "ドリンク":
+                drink_total += quantity
+                drink_sales += subtotal
+            else:
+                food_total += quantity
+                food_sales += subtotal
+
+        return {
+            "order_count": order_count,
+            "food_total": food_total,
+            "drink_total": drink_total,
+            "food_sales": food_sales,
+            "drink_sales": drink_sales,
+            "total_quantity": food_total + drink_total,
+            "total_sales": food_sales + drink_sales,
+            "food_menus": [{"name": name, "quantity": quantity} for name, quantity in food_menus.items()],
+            "drink_menus": [{"name": name, "quantity": quantity} for name, quantity in drink_menus.items()],
+        }
+
+    daily_summary = build_summary(target_date, target_date + timedelta(days=1))
+    next_month = (target_month.replace(day=28) + timedelta(days=4)).replace(day=1)
+    monthly_summary = build_summary(target_month, next_month)
+
+    return render(
+        request,
+        "order_data.html",
+        {
+            "is_headquarters": is_headquarters,
+            "store_options": store_options,
+            "selected_store": selected_store,
+            "target_date": target_date,
+            "target_month": target_month,
+            "daily_summary": daily_summary,
+            "monthly_summary": monthly_summary,
+            "page_title": "注文データ",
+            "back_url": "headquarters_top" if is_headquarters else "store_top",
+            "back_button_text": "本社トップへ戻る" if is_headquarters else "店舗トップへ戻る",
         },
     )
 

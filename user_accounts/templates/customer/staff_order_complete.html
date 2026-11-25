@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数量変更完了</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Meiryo", sans-serif;
+            background: #f7f7f7;
+            color: #333;
+        }
+
+        header {
+            background: #c86b42;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 6px #00000015;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 21px;
+        }
+
+        main {
+            max-width: 500px;
+            margin: 70px auto;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .complete-card {
+            background: white;
+            padding: 40px 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px #00000010;
+        }
+
+        .check-icon {
+            width: 75px;
+            height: 75px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            background: #e9f5e9;
+            color: #4b9b59;
+            font-size: 40px;
+            line-height: 75px;
+        }
+
+        h2 {
+            color: #c86b42;
+            font-size: 21px;
+            margin-bottom: 15px;
+        }
+
+        p {
+            font-size: 14px;
+            line-height: 1.8;
+            color: #666;
+        }
+
+        .back-button {
+            display: block;
+            margin-top: 30px;
+            padding: 14px;
+            background: #c86b42;
+            color: white;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .back-button:hover {
+            background: #a95330;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>数量変更完了</h1>
+</header>
+
+<main>
+    <div class="complete-card">
+
+        <div class="check-icon">✓</div>
+
+        <h2>数量変更が完了しました</h2>
+
+        <p>
+            注文の数量変更が完了しました。
+        </p>
+
+        <a href="{% url 'staff_order' %}" class="back-button">
+            注文管理画面に戻る
+        </a>
+
+    </div>
+</main>
+
+</body>
+</html>

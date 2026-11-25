@@ -5,6 +5,7 @@ from . import views
 from . import staff_views
 from . import headquarters_manager_views
 
+
 urlpatterns = [
     # 入口
     path("", views.entry_view, name="entry"),
@@ -58,13 +59,50 @@ urlpatterns = [
     ),
     path("logout", views.logout_view, name="logout"),
 
+    # 店員専用：ログイン・注文管理・ログアウト
+    path(
+        "staff-login/",
+        staff_views.staff_login,
+        name="staff_login",
+    ),
+    path(
+        "staff-order/",
+        staff_views.staff_order,
+        name="staff_order",
+    ),
+    path(
+        "staff-order-detail/",
+        staff_views.staff_order_detail,
+        name="staff_order_detail",
+    ),
+    path(
+        "staff-order-detail/<int:detail_id>/decrease/",
+        staff_views.staff_order_decrease,
+        name="staff_order_decrease",
+    ),
+    path(
+        "staff-order-complete/",
+        staff_views.staff_order_complete,
+        name="staff_order_complete",
+    ),
+    path(
+        "staff-logout-confirm/",
+        staff_views.staff_logout_confirm,
+        name="staff_logout_confirm",
+    ),
+    path(
+        "staff-logout/",
+        staff_views.staff_logout,
+        name="staff_logout",
+    ),
+
     # 店舗トップ・店員アカウント管理・店員一覧・在庫一覧・棚卸
     path(
         "store/top",
         views.store_top,
         name="store_top",
     ),
-        path(
+    path(
         "store/inventory-management",
         views.inventory_management,
         name="inventory_management",
@@ -84,7 +122,7 @@ urlpatterns = [
         views.inventory_list,
         name="inventory_list",
     ),
-        path(
+    path(
         "store/inventory",
         views.inventory_list,
         name="stock_list",
@@ -94,7 +132,7 @@ urlpatterns = [
         views.stocktake_register,
         name="stocktake_register",
     ),
-        path(
+    path(
         "store/stocktake",
         views.stocktake_register,
         name="stock_change",
@@ -234,6 +272,13 @@ urlpatterns = [
         name="order_history2",
     ),
 
+    # 店長・本社管理者共通：注文データ
+    path(
+        "order-data",
+        views.order_data,
+        name="order_data",
+    ),
+
     # QRコードから開くお客様用画面
     path(
         "order/<int:store_id>/<int:table_no>",
@@ -284,5 +329,4 @@ urlpatterns = [
         views.customer_checkout,
         name="customer_checkout",
     ),
-
 ]

@@ -28,6 +28,11 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
     "10.250.157.177",
+    "100.61.82.142",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://100.61.82.142",
 ]
 
 

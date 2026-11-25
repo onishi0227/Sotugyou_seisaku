@@ -1,11 +1,13 @@
 
-{% load static %}
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>お客様用メニュー</title>
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
     <style>
         * {
@@ -25,6 +27,7 @@
             padding: 18px 16px;
             text-align: center;
             border-bottom: 1px solid #eee;
+            position: relative;
         }
 
         header h1 {
@@ -37,6 +40,27 @@
             color: #666;
         }
 
+        .staff-menu {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .user-button {
+            width: 42px;
+            height: 42px;
+            border: none;
+            border-radius: 50%;
+            background: #212529;
+            color: white;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
         main {
             width: 100%;
             max-width: 600px;
@@ -44,7 +68,6 @@
             padding: 16px;
         }
 
-        /* カテゴリー */
         .categories {
             display: flex;
             gap: 8px;
@@ -69,7 +92,6 @@
             border-color: #c86b42;
         }
 
-        /* メニュー一覧 */
         .menu-list {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -87,7 +109,6 @@
             flex-direction: column;
         }
 
-        /* 画像の枠を統一 */
         .menu-image {
             display: block;
             width: 100%;
@@ -108,7 +129,6 @@
             padding: 8px;
         }
 
-        /* メニュー情報 */
         .menu-info {
             padding: 10px;
             display: flex;
@@ -132,7 +152,6 @@
             margin-bottom: 10px;
         }
 
-        /* 数量変更 */
         .quantity-control {
             display: flex;
             justify-content: space-between;
@@ -163,7 +182,6 @@
             font-weight: bold;
         }
 
-        /* 画面下部のカート */
         .cart-bar {
             position: fixed;
             bottom: 0;
@@ -210,7 +228,6 @@
             touch-action: manipulation;
         }
 
-        /* 下部のボタンを横並びにする */
         .cart-buttons {
             display: flex;
             align-items: center;
@@ -218,7 +235,6 @@
             flex-shrink: 0;
         }
 
-        /* 注文履歴ボタン */
         .history-button {
             background: #fff;
             color: #c86b42;
@@ -245,7 +261,21 @@
             padding: 30px 0;
         }
 
-        /* スマートフォン */
+        .error-messages {
+            background: #fff0f0;
+            border: 1px solid #e5aaaa;
+            color: #b00020;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .error-messages ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
         @media screen and (max-width: 480px) {
             header {
                 padding: 16px 12px;
@@ -253,6 +283,16 @@
 
             header h1 {
                 font-size: 20px;
+            }
+
+            .staff-menu {
+                right: 12px;
+            }
+
+            .user-button {
+                width: 38px;
+                height: 38px;
+                font-size: 18px;
             }
 
             main {
@@ -312,13 +352,6 @@
                 font-size: 17px;
             }
 
-            .confirm-button {
-                max-width: 65%;
-                padding: 12px 10px;
-                font-size: 12px;
-                white-space: normal;
-            }
-
             .cart-buttons {
                 gap: 5px;
             }
@@ -339,7 +372,6 @@
             }
         }
 
-        /* 小さなスマートフォン */
         @media screen and (max-width: 360px) {
             main {
                 padding: 10px;
@@ -367,24 +399,34 @@
 </head>
 
 <body>
-
-    <form
-        id="customerOrderForm"
-        method="POST"
-        action="{% url 'customer_order_confirm' store_id=store_id table_no=table_no %}"
-        style="display: none;"
-    >
-        {% csrf_token %}
-    </form>
-
     <header>
         <h1>メニュー</h1>
+
         <div class="table-number" id="tableNumber">
-            テーブル番号：1
+            テーブル番号：{{ table_no }}
+        </div>
+
+        <div class="staff-menu">
+            <button type="button"
+                    class="user-button"
+                    aria-label="スタッフログイン"
+                    onclick="location.href='{% url 'staff_login' %}'">
+                <i class="fa-solid fa-user"></i>
+            </button>
         </div>
     </header>
 
     <main>
+        {% if errors %}
+            <div class="error-messages">
+                <ul>
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
         <div class="categories">
             <button type="button"
                     class="category-button active"
@@ -396,53 +438,11 @@
 
             <button type="button"
                     class="category-button"
-                    data-category="ドリンク">ドリンク</button>
+                    data-category="ドリンク"
+                    hidden>ドリンク</button>
         </div>
 
-        <div class="menu-list" id="menuList">
-            {% for product in products %}
-                <article
-                    class="menu-card"
-                    data-id="{{ product.id }}"
-                    data-name="{{ product.name|escape }}"
-                    data-price="{{ product.price }}"
-                    data-category="{% if product.category == 'ドリンク' %}ドリンク{% else %}料理{% endif %}"
-                >
-                    <div class="menu-image image-placeholder">
-                        画像は準備中です
-                    </div>
-
-                    <div class="menu-info">
-                        <p class="menu-name">{{ product.name }}</p>
-
-                        <div class="menu-price">
-                            ¥{{ product.price }}
-                        </div>
-
-                        <div class="quantity-control">
-                            <button
-                                type="button"
-                                class="minus-button"
-                                aria-label="{{ product.name }}を1つ減らす"
-                                disabled
-                            >−</button>
-
-                            <span class="quantity">0</span>
-
-                            <button
-                                type="button"
-                                class="plus-button"
-                                aria-label="{{ product.name }}を1つ増やす"
-                            >+</button>
-                        </div>
-                    </div>
-                </article>
-            {% empty %}
-                <p class="notice">
-                    現在、販売中のメニューはありません。
-                </p>
-            {% endfor %}
-        </div>
+        <div class="menu-list" id="menuList"></div>
     </main>
 
     <div class="cart-bar">
@@ -474,76 +474,150 @@
         </div>
     </div>
 
+    <!-- Djangoへの注文送信用フォーム -->
+    <form id="orderForm"
+          method="POST"
+          action="{% url 'customer_order_confirm' store_id=store_id table_no=table_no %}"
+          hidden>
+        {% csrf_token %}
+    </form>
 
     <script>
-        // Djangoから表示された商品情報を取得
-        const menus = Array.from(
-            document.querySelectorAll(".menu-card")
-        ).map(card => ({
-            id: Number(card.dataset.id),
-            name: card.dataset.name,
-            price: Number(card.dataset.price),
-            category: card.dataset.category,
-            element: card
-        }));
+        // データベースの商品情報を取得
+        const menus = [
+            {% for product in products %}
+                {
+                    id: {{ product.pk }},
+                    name: "{{ product.name|escapejs }}",
+                    price: {{ product.price }},
+                    category: "料理",
+                    image: "{% if product.name == '豚の生姜焼き定食' %}/static/customer/images/豚の生姜焼き定食.jpg{% endif %}"
+                }{% if not forloop.last %},{% endif %}
+            {% empty %}
+            {% endfor %}
+        ];
 
         const quantities = {};
         let currentCategory = "すべて";
 
-        // Djangoから店舗番号・テーブル番号を取得
-        const storeId = "{{ store_id|escapejs }}";
-        const table = "{{ table_no|escapejs }}";
+        const pathParts = location.pathname.split("/").filter(Boolean);
+        const storeId = pathParts[1];
+        const table = pathParts[2];
 
-        document.getElementById("tableNumber").textContent =
-            "テーブル番号：" + table;
+        if (!storeId || !table) {
+            console.error("店舗IDまたはテーブル番号をURLから取得できません。");
+        }
+
+        const tableNumber = document.getElementById("tableNumber");
+        tableNumber.textContent =
+            "テーブル番号：" + (table || "1");
 
         const menuList = document.getElementById("menuList");
         const cartCount = document.getElementById("cartCount");
         const cartTotal = document.getElementById("cartTotal");
         const confirmButton = document.getElementById("confirmButton");
         const historyButton = document.getElementById("historyButton");
-        const customerOrderForm = document.getElementById("customerOrderForm");
+        const orderForm = document.getElementById("orderForm");
 
-        // 商品数量を画面に反映
-        function updateProductQuantity(menu) {
-            const quantity = quantities[menu.id] || 0;
-
-            menu.element.querySelector(".quantity").textContent = quantity;
-
-            menu.element.querySelector(".minus-button").disabled =
-                quantity === 0;
+        // 画像が読み込めない場合の代替表示
+        function createImagePlaceholder(menuName) {
+            const placeholder = document.createElement("div");
+            placeholder.className = "menu-image image-placeholder";
+            placeholder.textContent = "画像を読み込めません";
+            placeholder.setAttribute("role", "img");
+            placeholder.setAttribute("aria-label", menuName + "の画像");
+            return placeholder;
         }
 
-        // カテゴリー表示切り替え
+        // メニュー一覧を表示
         function renderMenus() {
-            let visibleCount = 0;
+            menuList.innerHTML = "";
 
-            menus.forEach(menu => {
-                const visible =
-                    currentCategory === "すべて" ||
-                    menu.category === currentCategory;
+            const filteredMenus = menus.filter(menu =>
+                currentCategory === "すべて" ||
+                menu.category === currentCategory
+            );
 
-                menu.element.style.display = visible ? "flex" : "none";
+            filteredMenus.forEach(menu => {
+                const quantity = quantities[menu.id] || 0;
 
-                if (visible) {
-                    visibleCount++;
+                const card = document.createElement("article");
+                card.className = "menu-card";
+
+                let image;
+
+                if (menu.image) {
+                    image = document.createElement("img");
+                    image.className = "menu-image";
+                    image.src = menu.image;
+                    image.alt = menu.name;
+                    image.loading = "lazy";
+
+                    image.onerror = function () {
+                        const placeholder =
+                            createImagePlaceholder(menu.name);
+                        image.replaceWith(placeholder);
+                    };
+                } else {
+                    image = createImagePlaceholder(menu.name);
                 }
 
-                updateProductQuantity(menu);
+                const info = document.createElement("div");
+                info.className = "menu-info";
+
+                const name = document.createElement("p");
+                name.className = "menu-name";
+                name.textContent = menu.name;
+
+                const price = document.createElement("div");
+                price.className = "menu-price";
+                price.textContent =
+                    "¥" + Number(menu.price).toLocaleString("ja-JP");
+
+                const controls = document.createElement("div");
+                controls.className = "quantity-control";
+
+                const minus = document.createElement("button");
+                minus.type = "button";
+                minus.textContent = "−";
+                minus.setAttribute(
+                    "aria-label", menu.name + "を1つ減らす"
+                );
+                minus.disabled = quantity === 0;
+
+                minus.addEventListener("click", () => {
+                    changeQuantity(menu.id, -1);
+                });
+
+                const qty = document.createElement("span");
+                qty.className = "quantity";
+                qty.textContent = quantity;
+                qty.setAttribute("aria-label", "注文数量");
+
+                const plus = document.createElement("button");
+                plus.type = "button";
+                plus.textContent = "+";
+                plus.setAttribute(
+                    "aria-label", menu.name + "を1つ増やす"
+                );
+
+                plus.addEventListener("click", () => {
+                    changeQuantity(menu.id, 1);
+                });
+
+                controls.append(minus, qty, plus);
+                info.append(name, price, controls);
+                card.append(image, info);
+                menuList.appendChild(card);
             });
 
-            let notice = menuList.querySelector(".category-notice");
-
-            if (visibleCount === 0 && menus.length > 0) {
-                if (!notice) {
-                    notice = document.createElement("p");
-                    notice.className = "notice category-notice";
-                    notice.textContent =
-                        "このカテゴリーのメニューはありません。";
-                    menuList.appendChild(notice);
-                }
-            } else if (notice) {
-                notice.remove();
+            if (filteredMenus.length === 0) {
+                const notice = document.createElement("p");
+                notice.className = "notice";
+                notice.textContent = menus.length === 0
+                    ? "現在、販売中の商品はありません。"
+                    : "メニューがありません。";
+                menuList.appendChild(notice);
             }
 
             updateCart();
@@ -553,16 +627,10 @@
         function changeQuantity(id, amount) {
             quantities[id] = Math.max(
                 0,
-                (quantities[id] || 0) + amount
+                Math.min(99, (quantities[id] || 0) + amount)
             );
 
-            const menu = menus.find(item => item.id === id);
-
-            if (menu) {
-                updateProductQuantity(menu);
-            }
-
-            updateCart();
+            renderMenus();
         }
 
         // カートの点数と合計金額を更新
@@ -572,31 +640,16 @@
 
             menus.forEach(menu => {
                 const quantity = quantities[menu.id] || 0;
-
                 count += quantity;
                 total += menu.price * quantity;
             });
 
             cartCount.textContent = count;
-
             cartTotal.textContent =
                 "¥" + total.toLocaleString("ja-JP");
 
             confirmButton.disabled = count === 0;
         }
-
-        // 数量ボタンのイベント設定
-        menus.forEach(menu => {
-            menu.element.querySelector(".minus-button")
-                .addEventListener("click", () => {
-                    changeQuantity(menu.id, -1);
-                });
-
-            menu.element.querySelector(".plus-button")
-                .addEventListener("click", () => {
-                    changeQuantity(menu.id, 1);
-                });
-        });
 
         // カテゴリー切り替え
         document.querySelectorAll(".category-button").forEach(button => {
@@ -607,37 +660,53 @@
                     .forEach(item => item.classList.remove("active"));
 
                 button.classList.add("active");
-
                 renderMenus();
             });
         });
 
         // 注文確認画面へ進む
         confirmButton.addEventListener("click", () => {
-            // 既存の数量入力欄を削除
-            customerOrderForm.querySelectorAll(
-                'input[name^="quantity_"]'
-            ).forEach(input => input.remove());
+            const selectedMenus = menus.filter(
+                menu => (quantities[menu.id] || 0) > 0
+            );
 
-            // 商品ごとの数量をDjangoへ送信
-            menus.forEach(menu => {
+            if (selectedMenus.length === 0) {
+                alert("注文する商品を1つ以上選択してください。");
+                return;
+            }
+
+            if (!storeId || !table) {
+                alert("店舗情報を取得できません。");
+                return;
+            }
+
+            // 前回の入力値を削除
+            orderForm.querySelectorAll('input[name^="quantity_"]')
+                .forEach(input => input.remove());
+
+            // Django側が要求する quantity_商品ID の形式で送信
+            selectedMenus.forEach(menu => {
                 const input = document.createElement("input");
-
                 input.type = "hidden";
-                input.name = `quantity_${menu.id}`;
-                input.value = quantities[menu.id] || 0;
+                input.name = "quantity_" + menu.id;
+                input.value = quantities[menu.id];
 
-                customerOrderForm.appendChild(input);
+                orderForm.appendChild(input);
             });
 
-            // 注文確認画面へPOST
-            customerOrderForm.submit();
+            // DjangoのビューへPOST
+            orderForm.submit();
         });
 
         // 注文履歴画面へ移動
         historyButton.addEventListener("click", () => {
+            if (!storeId || !table) {
+                alert("店舗情報を取得できません。");
+                return;
+            }
+
             location.href =
-                "{% url 'customer_order_history' store_id table_no %}";
+                `/order/${encodeURIComponent(storeId)}/${encodeURIComponent(table)}/history`;
         });
 
         // 初期表示

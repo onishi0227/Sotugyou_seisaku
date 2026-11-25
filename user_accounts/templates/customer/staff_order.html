@@ -1,0 +1,268 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>店員注文管理</title>
+    <link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Meiryo", sans-serif;
+            background: #f7f7f7;
+            color: #333;
+        }
+
+        /* ヘッダー */
+        header {
+            background: #c86b42;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 6px #00000015;
+            position: relative;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 21px;
+        }
+
+        header p {
+            margin: 7px 0 0;
+            font-size: 13px;
+        }
+
+        /* ユーザーアイコン */
+        .user-button {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 42px;
+            height: 42px;
+            border: 2px solid white;
+            border-radius: 50%;
+            background: transparent;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .user-button:hover {
+            background: #ffffff30;
+        }
+
+        /* メイン */
+        main {
+            max-width: 700px;
+            margin: 35px auto;
+            padding: 0 18px 30px;
+        }
+
+        .page-title {
+            font-size: 20px;
+            margin: 0 0 20px;
+        }
+
+        /* テーブル一覧 */
+        .table-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .table-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px #0000000d;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .table-info h2 {
+            margin: 0 0 8px;
+            font-size: 18px;
+        }
+
+        .order-count {
+            margin: 0;
+            color: #777;
+            font-size: 13px;
+        }
+
+        .order-button {
+            display: inline-block;
+            background: #c86b42;
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 13px;
+            font-weight: bold;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .order-button:hover {
+            background: #ad5734;
+        }
+
+        /* 注文なし */
+        .no-order {
+            color: #999;
+            background: #eeeeee;
+            cursor: default;
+        }
+
+        .no-order:hover {
+            background: #eeeeee;
+        }
+
+        /* 注文がない場合 */
+        .empty-message {
+            background: white;
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            color: #888;
+            box-shadow: 0 2px 8px #0000000d;
+        }
+
+        /* メッセージ */
+        .messages {
+            margin-bottom: 18px;
+        }
+
+        .message {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            background: #fff;
+            border: 1px solid #ddd;
+        }
+
+        /* ログアウト */
+        .logout-area {
+            text-align: center;
+            margin-top: 35px;
+        }
+
+        .logout-button {
+            display: inline-block;
+            color: #c86b42;
+            background: white;
+            border: 1px solid #c86b42;
+            border-radius: 8px;
+            padding: 12px 35px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .detail-button {
+            display: inline-block;
+            padding: 10px 18px;
+            background: #c86b42;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .detail-button:hover {
+            background: #a95330;
+        }
+
+        /* スマートフォン */
+        @media screen and (max-width: 480px) {
+            main {
+                margin-top: 25px;
+            }
+
+            .table-card {
+                padding: 16px;
+            }
+
+            .table-info h2 {
+                font-size: 17px;
+            }
+
+            .detail-button {
+                padding: 11px 12px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>店員注文管理</h1>
+    <p>お客様からの注文を確認できます</p>
+
+    <button type="button"
+            class="user-button"
+            aria-label="ログアウト"
+            title="ログアウト"
+            data-url="{% url 'staff_logout_confirm' %}"
+            onclick="location.href=this.dataset.url">
+        <i class="fa-solid fa-user"></i>
+    </button>
+</header>
+
+<main>
+
+    <h2 class="page-title">注文一覧</h2>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="table-list">
+
+        {% for table in tables %}
+            <div class="table-card">
+                <div class="table-info">
+                    <h2>テーブル{{ table.table_no }}</h2>
+                    <p class="order-count">
+                        注文数：{{ table.order_count }}件
+                    </p>
+                </div>
+
+                <a href="{% url 'staff_order_detail' %}?table={{ table.table_no }}"
+                   class="detail-button">
+                    注文確認
+                </a>
+            </div>
+        {% empty %}
+            <div class="empty-message">
+                現在、未会計の注文はありません。
+            </div>
+        {% endfor %}
+
+    </div>
+
+</main>
+
+</body>
+</html>

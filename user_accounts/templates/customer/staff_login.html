@@ -1,0 +1,293 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社員ログイン</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Meiryo", sans-serif;
+            background: #f7f7f7;
+            color: #333;
+            min-height: 100vh;
+        }
+
+        /* ヘッダー */
+        header {
+            background: #c86b42;
+            color: white;
+            padding: 18px 20px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 2px 6px #00000015;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 21px;
+        }
+
+        /* ログインエリア */
+        main {
+            width: 100%;
+            max-width: 420px;
+            margin: 55px auto;
+            padding: 0 18px;
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 14px;
+            padding: 30px 24px;
+            box-shadow: 0 3px 12px #0000000d;
+        }
+
+        .login-icon {
+            width: 65px;
+            height: 65px;
+            margin: 0 auto 18px;
+            border-radius: 50%;
+            background: #f8e8e0;
+            color: #c86b42;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+        }
+
+        .login-title {
+            text-align: center;
+            font-size: 21px;
+            margin: 0 0 8px;
+        }
+
+        .login-description {
+            text-align: center;
+            color: #777;
+            font-size: 13px;
+            margin-bottom: 28px;
+        }
+
+        /* 入力欄 */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 13px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: #c86b42;
+            box-shadow: 0 0 0 2px #c86b4220;
+        }
+
+        /* 社員IDの入力エラー */
+        .input-error {
+            border-color: #c0392b !important;
+            background-color: #fff8f7;
+        }
+
+        .field-error {
+            display: none;
+            color: #c0392b;
+            font-size: 12px;
+            margin-top: 7px;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 14px;
+            background-color: #c86b42;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+
+        .back-button {
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+            padding: 12px;
+            text-align: center;
+            color: #c86b42;
+            background-color: white;
+            border: 1px solid #c86b42;
+            border-radius: 8px;
+            text-decoration: none;
+            box-sizing: border-box;
+        }
+
+        /* エラーメッセージ */
+        .error-message {
+            background: #fff0ed;
+            color: #c0392b;
+            border-radius: 7px;
+            padding: 10px;
+            font-size: 13px;
+            margin-bottom: 18px;
+            text-align: center;
+        }
+
+        /* スマートフォン */
+        @media screen and (max-width: 480px) {
+            header {
+                padding: 17px 10px;
+            }
+
+            header h1 {
+                font-size: 19px;
+            }
+
+            main {
+                margin-top: 35px;
+            }
+
+            .login-card {
+                padding: 26px 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>社員ログイン</h1>
+    </header>
+
+    <main>
+        <div class="login-card">
+
+            <div class="login-icon">
+                <i>♟</i>
+            </div>
+
+            <h2 class="login-title">社員ログイン</h2>
+
+            <p class="login-description">
+                社員IDとパスワードを入力してください
+            </p>
+
+            {% if error %}
+                <div class="error-message">
+                    {{ error }}
+                </div>
+            {% endif %}
+
+            <form method="POST" id="login-form">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="employee_id">社員ID</label>
+
+                    <input
+                        type="text"
+                        id="employee_id"
+                        name="employee_id"
+                        placeholder="社員IDを入力"
+                        inputmode="text"
+                        maxlength="150"
+                        autocomplete="username"
+                        required
+                    >
+
+                    <p class="field-error" id="employee-id-error">
+                        社員IDは半角英数字で入力してください。
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">パスワード</label>
+
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="パスワードを入力"
+                        autocomplete="current-password"
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="login-button">
+                    ログイン
+                </button>
+
+                <a href="javascript:history.back()" class="back-button">
+                    メニューに戻る
+                </a>
+
+            </form>
+
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const form = document.getElementById("login-form");
+            const employeeId = document.getElementById("employee_id");
+            const errorMessage = document.getElementById("employee-id-error");
+
+            // 社員IDの入力内容を確認
+            function checkEmployeeId() {
+
+                const value = employeeId.value;
+
+                // 半角英数字以外が入力されている場合
+                if (value !== "" && !/^[A-Za-z0-9_.-]+$/.test(value)) {
+
+                    errorMessage.style.display = "block";
+                    employeeId.classList.add("input-error");
+
+                    return false;
+                }
+
+                // 正しい入力の場合
+                errorMessage.style.display = "none";
+                employeeId.classList.remove("input-error");
+
+                return true;
+            }
+
+            // 入力中にチェック
+            employeeId.addEventListener("input", checkEmployeeId);
+
+            // ログインボタンを押したときにチェック
+            form.addEventListener("submit", function (event) {
+
+                if (!checkEmployeeId()) {
+                    event.preventDefault();
+                    employeeId.focus();
+                }
+
+            });
+
+        });
+    </script>
+
+</body>
+</html>

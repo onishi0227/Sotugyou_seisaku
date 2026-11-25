@@ -226,15 +226,16 @@
 
                 <div class="management-container">
 
-                    <!-- 注文 -->
-                    <div class="management-card" aria-disabled="true">
+                    <!-- 注文履歴 -->
+                    <a href="{% url 'order_data' %}"
+                       class="management-card">
                         <div class="management-title">
                             <div class="management-icon">
                                 <i class="fa-solid fa-receipt"></i>
                             </div>
-                            <h3>注文</h3>
+                            <h3>注文履歴</h3>
                         </div>
-                    </div>
+                    </a>
 
                     <!-- 棚卸登録 -->
                     <a href="{% url 'stock_change' %}"
@@ -249,7 +250,7 @@
 
                     <!-- 在庫 -->
                     <a href="{% url 'inventory_management' %}"
-                    class="management-card">
+                       class="management-card">
                         <div class="management-title">
                             <div class="management-icon">
                                 <i class="fa-solid fa-boxes-stacked"></i>

@@ -1,0 +1,96 @@
+
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ログアウト</title>
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+
+    <style>
+        .logout-main {
+            padding-top: 180px;
+            text-align: center;
+        }
+
+        .logout-box {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 40px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            background-color: white;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .logout-box h1 {
+            margin-bottom: 25px;
+        }
+
+        .logout-box p {
+            color: #777;
+            margin-bottom: 30px;
+        }
+
+        .logout-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .logout-buttons form {
+            margin: 0;
+        }
+
+        @media screen and (max-width: 480px) {
+            .logout-main {
+                padding: 100px 15px 30px;
+            }
+
+            .logout-box {
+                padding: 30px 20px;
+            }
+
+            .logout-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<main class="logout-main">
+    <div class="container">
+        <div class="logout-box">
+
+            <h1>ログアウト</h1>
+
+            <p>ログアウトしますか？</p>
+
+            <div class="logout-buttons">
+
+                <!-- キャンセル -->
+                <a href="{% url 'staff_order' %}"
+                   class="btn btn-secondary">
+                    キャンセル
+                </a>
+
+                <!-- ログアウト -->
+                <form method="POST" action="{% url 'staff_logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">
+                        ログアウト
+                    </button>
+                </form>
+
+            </div>
+
+        </div>
+    </div>
+</main>
+
+</body>
+</html>
